@@ -10,6 +10,7 @@ import { sortCasesByDate } from "@/logic/caseSelectors";
 import type { CaseFile } from "@/models/case";
 import { GlassPanel } from "../components/GlassPanel";
 import { CaseCard } from "../components/CaseCard";
+import { feature } from "topojson-client";
 
 const CAMERA_DISTANCE = 3.6;
 const GLOBE_RADIUS = 1.55;
@@ -98,16 +99,11 @@ export default function GlobeScene() {
     scene.add(globeGroup);
 
     const globeGeometry = new THREE.SphereGeometry(GLOBE_RADIUS, 96, 96);
-    const earthTexture = new THREE.TextureLoader().load(
-      "/textures/earth-day.png",
-    );
-    earthTexture.colorSpace = THREE.SRGBColorSpace;
-
     const globeMaterial = new THREE.MeshStandardMaterial({
-      map: earthTexture,
-      roughness: 0.6,
-      metalness: 0.1,
-      emissive: new THREE.Color("#071426"),
+      color: new THREE.Color("#0a1524"),
+      roughness: 0.5,
+      metalness: 0.15,
+      emissive: new THREE.Color("#0b1f33"),
     });
     const globe = new THREE.Mesh(globeGeometry, globeMaterial);
     globeGroup.add(globe);
@@ -138,6 +134,11 @@ export default function GlobeScene() {
 
     const markerGroup = new THREE.Group();
     const markers: MarkerMesh[] = [];
+    let countryLines: THREE.LineSegments | null = null;
+    let countryGlow: THREE.LineSegments | null = null;
+    let countryGeometry: THREE.BufferGeometry | null = null;
+    let countryMaterial: THREE.LineBasicMaterial | null = null;
+    let countryGlowMaterial: THREE.LineBasicMaterial | null = null;
     const markerGeometry = new THREE.SphereGeometry(0.015, 16, 16);
     const ringGeometry = new THREE.RingGeometry(0.026, 0.045, 32);
 
@@ -198,6 +199,84 @@ export default function GlobeScene() {
     const stars = new THREE.Points(starsGeometry, starsMaterial);
     scene.add(stars);
 
+    const loadCountryOutlines = async () => {
+      try {
+        const response = await fetch("/data/world-110m.json");
+        if (!response.ok) {
+          return;
+        }
+
+        const worldData = await response.json();
+        if (isDisposed) {
+          return;
+        }
+
+        const countries = feature(
+          worldData,
+          worldData.objects.countries,
+        ) as GeoJSON.FeatureCollection;
+
+        const positions: number[] = [];
+        const outlineRadius = GLOBE_RADIUS + 0.012;
+
+        const appendRing = (ring: number[][]) => {
+          if (ring.length < 2) {
+            return;
+          }
+          for (let i = 0; i < ring.length; i += 1) {
+            const [lon1, lat1] = ring[i];
+            const [lon2, lat2] = ring[(i + 1) % ring.length];
+            const start = latLongToVector3(lat1, lon1, outlineRadius);
+            const end = latLongToVector3(lat2, lon2, outlineRadius);
+            positions.push(start.x, start.y, start.z);
+            positions.push(end.x, end.y, end.z);
+          }
+        };
+
+        countries.features.forEach((country) => {
+          const geometry = country.geometry;
+          if (!geometry) {
+            return;
+          }
+
+          if (geometry.type === "Polygon") {
+            geometry.coordinates.forEach((ring) => appendRing(ring));
+          } else if (geometry.type === "MultiPolygon") {
+            geometry.coordinates.forEach((polygon) => {
+              polygon.forEach((ring) => appendRing(ring));
+            });
+          }
+        });
+
+        countryGeometry = new THREE.BufferGeometry();
+        countryGeometry.setAttribute(
+          "position",
+          new THREE.Float32BufferAttribute(positions, 3),
+        );
+
+        countryMaterial = new THREE.LineBasicMaterial({
+          color: new THREE.Color("#60e4ff"),
+          transparent: true,
+          opacity: 0.38,
+          depthWrite: false,
+        });
+
+        countryGlowMaterial = new THREE.LineBasicMaterial({
+          color: new THREE.Color("#60e4ff"),
+          transparent: true,
+          opacity: 0.16,
+          depthWrite: false,
+        });
+
+        countryGlow = new THREE.LineSegments(countryGeometry, countryGlowMaterial);
+        countryLines = new THREE.LineSegments(countryGeometry, countryMaterial);
+        globeGroup.add(countryGlow);
+        globeGroup.add(countryLines);
+      } catch (error) {
+        // ignore outline load failures
+      }
+    };
+
     renderer = new WebGPURenderer({
       antialias: true,
       alpha: true,
@@ -224,6 +303,7 @@ export default function GlobeScene() {
       renderer.setSize(container.clientWidth, container.clientHeight);
       renderer.setClearColor(0x000000, 0);
       container.appendChild(renderer.domElement);
+      loadCountryOutlines();
 
       const controls = new OrbitControls(camera, renderer.domElement);
       controls.enablePan = false;
@@ -365,7 +445,6 @@ export default function GlobeScene() {
       renderer?.dispose();
       renderer?.domElement.remove();
       globeGeometry.dispose();
-      earthTexture.dispose();
       globeMaterial.dispose();
       wireframeMaterial.dispose();
       atmosphereGeometry.dispose();
@@ -389,6 +468,16 @@ export default function GlobeScene() {
           ringMaterial.dispose();
         }
       });
+
+      if (countryLines) {
+        globeGroup.remove(countryLines);
+      }
+      if (countryGlow) {
+        globeGroup.remove(countryGlow);
+      }
+      countryGeometry?.dispose();
+      countryMaterial?.dispose();
+      countryGlowMaterial?.dispose();
     };
   }, [closeActiveCase]);
 
@@ -422,7 +511,7 @@ export default function GlobeScene() {
               onClick={closeActiveCase}
               aria-label="Close case file"
             >
-              ✕
+              x
             </button>
             <GlassPanel>
               <CaseCard caseFile={activeCase} />
