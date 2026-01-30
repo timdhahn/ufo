@@ -18,11 +18,12 @@ export function Hero() {
           events from 1940 to present.
         </p>
         <div className={styles.actions}>
-          <Button label="Enter Global Map" href="/" />
+          <Button label="Enter Global Map" href="#global-map" />
           <Button label="View Methodology" href="/methodology" variant="ghost" />
         </div>
       </div>
-      <GlassPanel className={styles.heroFrame}>
+      <GlassPanel className={styles.heroFrame} >
+        <div id="global-map" className={styles.anchor} />
         <div className={styles.globeWrap}>
           <GlobeClient />
         </div>
