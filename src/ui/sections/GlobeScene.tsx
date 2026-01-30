@@ -14,7 +14,7 @@ import { feature } from "topojson-client";
 
 const CAMERA_DISTANCE = 3.6;
 const GLOBE_RADIUS = 1.55;
-const GLOBE_ROTATION_OFFSET = -Math.PI / 2;
+const DEFAULT_GLOBE_FOCUS = { lat: 40.7, lon: -74.0 };
 const INTRO_DURATION = 7000;
 const INTRO_PHASES = {
   galaxyIn: 900,
@@ -67,6 +67,12 @@ function latLongToVector3(lat: number, lon: number, radius: number) {
     radius * Math.sin(phi) * Math.sin(theta),
   );
 }
+
+const getFocusQuaternion = (lat: number, lon: number) =>
+  new THREE.Quaternion().setFromUnitVectors(
+    latLongToVector3(lat, lon, 1).normalize(),
+    new THREE.Vector3(0, 0, 1),
+  );
 
 export default function GlobeScene() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -146,7 +152,9 @@ export default function GlobeScene() {
     camera.position.copy(cameraStart);
 
     const globeGroup = new THREE.Group();
-    globeGroup.rotation.y = GLOBE_ROTATION_OFFSET;
+    globeGroup.quaternion.copy(
+      getFocusQuaternion(DEFAULT_GLOBE_FOCUS.lat, DEFAULT_GLOBE_FOCUS.lon),
+    );
     scene.add(globeGroup);
 
     const introGroup = new THREE.Group();

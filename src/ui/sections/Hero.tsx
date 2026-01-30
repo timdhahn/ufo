@@ -8,7 +8,7 @@ export function Hero() {
   return (
     <section className={styles.hero}>
       <div className={styles.heroContent}>
-        <p className={styles.kicker}>Global X-Files Initiative</p>
+        <p className={styles.kicker}>Global archive</p>
         <h1 className={styles.title}>Global anomalous activity, one map.</h1>
         <p className={styles.subtitle}>
           A cinematic, data-driven archive of sightings and high-strangeness
@@ -18,10 +18,7 @@ export function Hero() {
           <DataPill label="Active Cases" value="1,432" />
           <DataPill label="Unresolved" value="987" />
         </div>
-        <div className={styles.actions}>
-          <Button label="Enter Global Map" href="#global-map" />
-          <Button label="View Methodology" href="/methodology" variant="ghost" />
-        </div>
+        <div className={styles.actions} />
       </div>
       <GlassPanel className={styles.heroFrame}>
         <div id="global-map" className={styles.anchor} />
