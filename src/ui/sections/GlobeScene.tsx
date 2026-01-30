@@ -59,10 +59,15 @@ export default function GlobeScene() {
     camera.position.set(0, 0, CAMERA_DISTANCE);
 
     const globeGeometry = new THREE.SphereGeometry(GLOBE_RADIUS, 96, 96);
+    const earthTexture = new THREE.TextureLoader().load(
+      "/textures/earth-day.png",
+    );
+    earthTexture.colorSpace = THREE.SRGBColorSpace;
+
     const globeMaterial = new THREE.MeshStandardMaterial({
-      color: new THREE.Color("#0b1a2a"),
-      roughness: 0.35,
-      metalness: 0.2,
+      map: earthTexture,
+      roughness: 0.6,
+      metalness: 0.1,
       emissive: new THREE.Color("#071426"),
     });
     const globe = new THREE.Mesh(globeGeometry, globeMaterial);
@@ -231,6 +236,7 @@ export default function GlobeScene() {
       renderer?.dispose();
       renderer?.domElement.remove();
       globeGeometry.dispose();
+      earthTexture.dispose();
       globeMaterial.dispose();
       wireframeMaterial.dispose();
       atmosphereGeometry.dispose();
