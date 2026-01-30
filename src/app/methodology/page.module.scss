@@ -1,0 +1,21 @@
+.panel {
+  padding: 1.5rem;
+}
+
+.panel h2 {
+  font-family: var(--font-display);
+  margin-top: 0;
+}
+
+.panel p {
+  color: rgba(230, 244, 255, 0.82);
+  margin: 0.8rem 0 0;
+}
+
+.panel ul {
+  color: rgba(230, 244, 255, 0.82);
+  display: grid;
+  gap: 0.6rem;
+  margin: 0.8rem 0 0;
+  padding-left: 1.1rem;
+}

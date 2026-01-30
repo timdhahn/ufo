@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Orbitron, Space_Grotesk } from "next/font/google";
 import styles from "./layout.module.scss";
 import "./globals.scss";
+import { SiteNav } from "@/ui/sections/SiteNav";
 
 const orbitron = Orbitron({
   subsets: ["latin"],
@@ -28,7 +29,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${orbitron.variable} ${spaceGrotesk.variable}`}>
-        <div className={styles.page}>{children}</div>
+        <div className={styles.page}>
+          <SiteNav />
+          {children}
+        </div>
       </body>
     </html>
   );

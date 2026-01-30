@@ -41,6 +41,12 @@
   gap: 1rem;
 }
 
+.metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
 .placeholder {
   align-items: center;
   border: 1px dashed rgba(96, 228, 255, 0.4);

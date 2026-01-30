@@ -1,6 +1,7 @@
 import styles from "./Hero.module.scss";
 import { Button } from "../components/Button";
 import { GlassPanel } from "../components/GlassPanel";
+import { DataPill } from "../components/DataPill";
 import { GlobeClient } from "./GlobeClient";
 
 export function Hero() {
@@ -13,6 +14,10 @@ export function Hero() {
           A cinematic, data-driven archive of sightings and high-strangeness
           events from 1940 to present.
         </p>
+        <div className={styles.metrics}>
+          <DataPill label="Active Cases" value="1,432" />
+          <DataPill label="Unresolved" value="987" />
+        </div>
         <div className={styles.actions}>
           <Button label="Enter Global Map" href="#global-map" />
           <Button label="View Methodology" href="/methodology" variant="ghost" />

@@ -1,0 +1,131 @@
+.nav {
+  animation: navIn 600ms ease;
+  backdrop-filter: blur(14px);
+  background: linear-gradient(
+    180deg,
+    rgba(6, 12, 24, 0.9),
+    rgba(6, 12, 24, 0.45)
+  );
+  border-bottom: 1px solid rgba(96, 228, 255, 0.2);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.navInner {
+  align-items: center;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  padding: 1rem 6vw;
+}
+
+.brand {
+  color: rgba(96, 228, 255, 0.9);
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+
+.links {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.links a {
+  color: rgba(220, 240, 255, 0.7);
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  text-decoration: none;
+  text-transform: uppercase;
+  transition: color 160ms ease;
+}
+
+.links a:hover {
+  color: rgba(96, 228, 255, 0.95);
+}
+
+.toggle {
+  background: transparent;
+  border: 1px solid rgba(96, 228, 255, 0.4);
+  border-radius: 999px;
+  display: none;
+  flex-direction: column;
+  gap: 0.3rem;
+  height: 38px;
+  justify-content: center;
+  padding: 0.5rem 0.7rem;
+  width: 46px;
+}
+
+.toggle span {
+  background: rgba(96, 228, 255, 0.9);
+  border-radius: 999px;
+  display: block;
+  height: 2px;
+  transition: transform 200ms ease, opacity 200ms ease;
+  width: 100%;
+}
+
+.nav[data-open="true"] .toggle span:nth-child(1) {
+  transform: translateY(6px) rotate(45deg);
+}
+
+.nav[data-open="true"] .toggle span:nth-child(2) {
+  opacity: 0;
+}
+
+.nav[data-open="true"] .toggle span:nth-child(3) {
+  transform: translateY(-6px) rotate(-45deg);
+}
+
+.mobilePanel {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .links {
+    display: none;
+  }
+
+  .toggle {
+    display: flex;
+  }
+
+  .mobilePanel {
+    display: grid;
+    gap: 0.75rem;
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    padding: 0 6vw;
+    transition: max-height 260ms ease, opacity 260ms ease;
+  }
+
+  .mobilePanel[data-open="true"] {
+    max-height: 240px;
+    opacity: 1;
+    padding-bottom: 1.2rem;
+  }
+
+  .mobilePanel a {
+    color: rgba(220, 240, 255, 0.8);
+    font-size: 0.85rem;
+    letter-spacing: 0.08em;
+    text-decoration: none;
+    text-transform: uppercase;
+  }
+}
+
+@keyframes navIn {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
