@@ -531,7 +531,7 @@ export default function GlobeScene() {
         const countries = feature(
           worldData,
           worldData.objects.countries,
-        ) as GeoJSON.FeatureCollection;
+        ) as unknown as GeoJSON.FeatureCollection;
 
         const positions: number[] = [];
         const outlineRadius = GLOBE_RADIUS + 0.012;
