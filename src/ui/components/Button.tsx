@@ -5,9 +5,15 @@ type ButtonProps = {
   label: string;
   href?: string;
   variant?: "primary" | "ghost";
+  onClick?: () => void;
 };
 
-export function Button({ label, href, variant = "primary" }: ButtonProps) {
+export function Button({
+  label,
+  href,
+  variant = "primary",
+  onClick,
+}: ButtonProps) {
   const className =
     variant === "primary" ? styles.primaryButton : styles.ghostButton;
 
@@ -19,5 +25,9 @@ export function Button({ label, href, variant = "primary" }: ButtonProps) {
     );
   }
 
-  return <button className={className}>{label}</button>;
+  return (
+    <button className={className} type="button" onClick={onClick}>
+      {label}
+    </button>
+  );
 }

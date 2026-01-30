@@ -1,0 +1,50 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.2rem;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.caseId {
+  color: rgba(96, 228, 255, 0.8);
+  font-size: 0.7rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.status {
+  border: 1px solid rgba(96, 228, 255, 0.35);
+  border-radius: 999px;
+  padding: 0.2rem 0.7rem;
+  font-size: 0.75rem;
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  margin: 0;
+}
+
+.meta {
+  color: rgba(210, 230, 248, 0.7);
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.summary {
+  color: rgba(230, 244, 255, 0.8);
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}

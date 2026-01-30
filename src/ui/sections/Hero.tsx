@@ -1,6 +1,11 @@
 import styles from "./Hero.module.scss";
 import { Button } from "../components/Button";
 import { GlassPanel } from "../components/GlassPanel";
+import { CaseCard } from "../components/CaseCard";
+import { getCases } from "@/services/caseService";
+import { GlobeClient } from "./GlobeClient";
+
+const [primaryCase] = getCases();
 
 export function Hero() {
   return (
@@ -18,9 +23,16 @@ export function Hero() {
         </div>
       </div>
       <GlassPanel className={styles.heroFrame}>
-        <div className={styles.placeholder}>
-          Globe placeholder (WebGPU coming next)
+        <div className={styles.globeWrap}>
+          <GlobeClient />
         </div>
+        {primaryCase && (
+          <div className={styles.caseCard}>
+            <GlassPanel>
+              <CaseCard caseFile={primaryCase} />
+            </GlassPanel>
+          </div>
+        )}
       </GlassPanel>
     </section>
   );
