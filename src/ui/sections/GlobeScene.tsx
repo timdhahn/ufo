@@ -442,8 +442,7 @@ export default function GlobeScene() {
       if (renderer?.domElement && handlePointerDown) {
         renderer.domElement.removeEventListener("pointerdown", handlePointerDown);
       }
-      renderer?.dispose();
-      renderer?.domElement.remove();
+
       globeGeometry.dispose();
       globeMaterial.dispose();
       wireframeMaterial.dispose();
@@ -478,6 +477,9 @@ export default function GlobeScene() {
       countryGeometry?.dispose();
       countryMaterial?.dispose();
       countryGlowMaterial?.dispose();
+
+      renderer?.dispose();
+      renderer?.domElement.remove();
     };
   }, [closeActiveCase]);
 
