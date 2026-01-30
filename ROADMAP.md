@@ -63,8 +63,8 @@ Deliverables:
 
 ## Phase 3 — Globe hero (MVP focus)
 1. Implement a `GlobeScene` component:
-   - Dynamic import to avoid SSR WebGL issues.
-   - Use `react-globe.gl` or a minimal Three.js wrapper.
+   - Dynamic import to avoid SSR WebGPU issues.
+   - Use a WebGPU-first renderer (library choice to be finalized).
 2. Render markers from `cases.json`:
    - Neon cyan pulsing dots.
    - Hover to show brief tooltip.
@@ -138,7 +138,6 @@ Deliverables:
 ---
 
 ## Open decisions (to finalize before build)
-- Globe library choice: `react-globe.gl` vs raw Three.js.
+- WebGPU renderer/library choice (e.g., WebGPU-first engine vs custom renderer).
 - Font pairings: Orbitron + Space Grotesk (recommended).
 - Whether to include a minimal “stylized satellite toggle” for MVP (UI only).
-

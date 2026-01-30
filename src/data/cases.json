@@ -1,0 +1,92 @@
+[
+  {
+    "id": "phoenix-lights-1997",
+    "slug": "phoenix-lights-1997",
+    "title": "The Phoenix Lights",
+    "date": "1997-03-13",
+    "location": "Phoenix, Arizona, USA",
+    "coordinates": [33.4484, -112.074],
+    "summary": "Thousands reported a massive V-shaped craft over Arizona.",
+    "severity": "High",
+    "status": "Unresolved",
+    "media": [
+      {
+        "type": "video",
+        "src": "/media/phoenix-lights.mp4",
+        "caption": "Local news footage compilation."
+      }
+    ]
+  },
+  {
+    "id": "rendlesham-forest-1980",
+    "slug": "rendlesham-forest-1980",
+    "title": "Rendlesham Forest Incident",
+    "date": "1980-12-26",
+    "location": "Suffolk, England, UK",
+    "coordinates": [52.0944, 1.4325],
+    "summary": "Multiple nights of reported encounters near RAF Woodbridge.",
+    "severity": "High",
+    "status": "Unknown",
+    "media": [
+      {
+        "type": "image",
+        "src": "/media/rendlesham-forest.jpg",
+        "caption": "Forest edge near the reported landing site."
+      }
+    ]
+  },
+  {
+    "id": "westall-1966",
+    "slug": "westall-1966",
+    "title": "Westall School Sighting",
+    "date": "1966-04-06",
+    "location": "Melbourne, Victoria, Australia",
+    "coordinates": [-37.99, 145.12],
+    "summary": "Students and staff reported a low-flying craft over a school.",
+    "severity": "Moderate",
+    "status": "Unresolved",
+    "media": [
+      {
+        "type": "image",
+        "src": "/media/westall-school.jpg",
+        "caption": "Recreation of the sighting location."
+      }
+    ]
+  },
+  {
+    "id": "nimitz-2004",
+    "slug": "nimitz-2004",
+    "title": "USS Nimitz Tic Tac",
+    "date": "2004-11-14",
+    "location": "Pacific Ocean (off San Diego, USA)",
+    "coordinates": [32.95, -119.35],
+    "summary": "Military pilots reported a fast-moving object with unusual maneuvers.",
+    "severity": "Critical",
+    "status": "Unknown",
+    "media": [
+      {
+        "type": "video",
+        "src": "/media/nimitz-tic-tac.mp4",
+        "caption": "Declassified FLIR footage."
+      }
+    ]
+  },
+  {
+    "id": "belgian-wave-1989",
+    "slug": "belgian-wave-1989",
+    "title": "Belgian UFO Wave",
+    "date": "1989-11-29",
+    "location": "Wallonia, Belgium",
+    "coordinates": [50.59, 4.67],
+    "summary": "Wave of triangular craft sightings across Belgium over months.",
+    "severity": "Moderate",
+    "status": "Likely Explained",
+    "media": [
+      {
+        "type": "image",
+        "src": "/media/belgian-wave.jpg",
+        "caption": "Nighttime sky reported during the wave."
+      }
+    ]
+  }
+]
