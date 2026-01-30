@@ -71,26 +71,17 @@
   min-height: 320px;
 }
 
-.caseCard {
-  bottom: 1.5rem;
-  left: 1.5rem;
-  max-width: 360px;
-  position: absolute;
-  right: 1.5rem;
-  z-index: 2;
-}
-
 @media (min-width: 900px) {
-  .heroFrame {
-    min-height: 100vh;
+  .hero {
     padding: 0;
   }
 
-  .caseCard {
-    left: auto;
-    right: 6vw;
-    bottom: 10vh;
-    width: 340px;
+  .heroFrame {
+    border-radius: 0;
+    inset: 0;
+    min-height: 100vh;
+    padding: 0;
+    position: absolute;
   }
 
   .heroContent {
@@ -101,6 +92,6 @@
   }
 
   .globeWrap {
-    height: 100vh;
+    height: 100%;
   }
 }

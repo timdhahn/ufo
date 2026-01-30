@@ -1,20 +1,25 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { WebGPURenderer } from "three/webgpu";
 import styles from "./GlobeScene.module.scss";
 import { getCases } from "@/services/caseService";
 import { sortCasesByDate } from "@/logic/caseSelectors";
+import type { CaseFile } from "@/models/case";
+import { GlassPanel } from "../components/GlassPanel";
+import { CaseCard } from "../components/CaseCard";
 
 const CAMERA_DISTANCE = 3.6;
 const GLOBE_RADIUS = 1.55;
+const GLOBE_ROTATION_OFFSET = -Math.PI / 2;
 
 type MarkerMesh = {
   mesh: THREE.Mesh;
   ring: THREE.Mesh;
   phase: number;
+  caseFile: CaseFile;
 };
 
 const cases = sortCasesByDate(getCases(), "desc");
@@ -31,7 +36,37 @@ function latLongToVector3(lat: number, lon: number, radius: number) {
 
 export default function GlobeScene() {
   const containerRef = useRef<HTMLDivElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const lineRef = useRef<HTMLDivElement>(null);
+  const closeTimeoutRef = useRef<number | null>(null);
+  const activeMarkerRef = useRef<MarkerMesh | null>(null);
+  const controlsRef = useRef<OrbitControls | null>(null);
+  const pauseRotationRef = useRef(false);
+  const targetQuaternionRef = useRef<THREE.Quaternion | null>(null);
+  const activeCaseRef = useRef<CaseFile | null>(null);
   const [isSupported, setIsSupported] = useState(true);
+  const [activeCase, setActiveCase] = useState<CaseFile | null>(null);
+  const [panelVisible, setPanelVisible] = useState(false);
+
+  const closeActiveCase = useCallback(() => {
+    if (closeTimeoutRef.current) {
+      window.clearTimeout(closeTimeoutRef.current);
+      closeTimeoutRef.current = null;
+    }
+    setPanelVisible(false);
+    closeTimeoutRef.current = window.setTimeout(() => {
+      setActiveCase(null);
+      activeMarkerRef.current = null;
+      pauseRotationRef.current = false;
+      if (controlsRef.current) {
+        controlsRef.current.enableRotate = true;
+      }
+    }, 260);
+  }, []);
+
+  useEffect(() => {
+    activeCaseRef.current = activeCase;
+  }, [activeCase]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -45,9 +80,9 @@ export default function GlobeScene() {
     }
 
     let renderer: WebGPURenderer | null = null;
-    let controls: OrbitControls | null = null;
     let animationFrame = 0;
     let isDisposed = false;
+    let handlePointerDown: ((event: PointerEvent) => void) | null = null;
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(
@@ -57,6 +92,10 @@ export default function GlobeScene() {
       100,
     );
     camera.position.set(0, 0, CAMERA_DISTANCE);
+
+    const globeGroup = new THREE.Group();
+    globeGroup.rotation.y = GLOBE_ROTATION_OFFSET;
+    scene.add(globeGroup);
 
     const globeGeometry = new THREE.SphereGeometry(GLOBE_RADIUS, 96, 96);
     const earthTexture = new THREE.TextureLoader().load(
@@ -71,7 +110,7 @@ export default function GlobeScene() {
       emissive: new THREE.Color("#071426"),
     });
     const globe = new THREE.Mesh(globeGeometry, globeMaterial);
-    scene.add(globe);
+    globeGroup.add(globe);
 
     const wireframeMaterial = new THREE.MeshBasicMaterial({
       color: new THREE.Color("#1d4761"),
@@ -80,7 +119,7 @@ export default function GlobeScene() {
       opacity: 0.25,
     });
     const wireframe = new THREE.Mesh(globeGeometry, wireframeMaterial);
-    scene.add(wireframe);
+    globeGroup.add(wireframe);
 
     const atmosphereGeometry = new THREE.SphereGeometry(GLOBE_RADIUS * 1.04, 96, 96);
     const atmosphereMaterial = new THREE.MeshBasicMaterial({
@@ -90,7 +129,7 @@ export default function GlobeScene() {
       side: THREE.BackSide,
     });
     const atmosphere = new THREE.Mesh(atmosphereGeometry, atmosphereMaterial);
-    scene.add(atmosphere);
+    globeGroup.add(atmosphere);
 
     const ambientLight = new THREE.AmbientLight(0x88a2c9, 0.6);
     const keyLight = new THREE.DirectionalLight(0x9ad6ff, 1);
@@ -99,8 +138,8 @@ export default function GlobeScene() {
 
     const markerGroup = new THREE.Group();
     const markers: MarkerMesh[] = [];
-    const markerGeometry = new THREE.SphereGeometry(0.03, 16, 16);
-    const ringGeometry = new THREE.RingGeometry(0.04, 0.07, 32);
+    const markerGeometry = new THREE.SphereGeometry(0.015, 16, 16);
+    const ringGeometry = new THREE.RingGeometry(0.026, 0.045, 32);
 
     cases.forEach((caseFile, index) => {
       const markerMaterial = new THREE.MeshStandardMaterial({
@@ -127,12 +166,13 @@ export default function GlobeScene() {
       ring.position.copy(position);
       ring.lookAt(position.clone().multiplyScalar(1.05));
 
+      marker.userData.caseFile = caseFile;
       markerGroup.add(marker);
       markerGroup.add(ring);
-      markers.push({ mesh: marker, ring, phase: index * 0.7 });
+      markers.push({ mesh: marker, ring, phase: index * 0.7, caseFile });
     });
 
-    scene.add(markerGroup);
+    globeGroup.add(markerGroup);
 
     const starsGeometry = new THREE.BufferGeometry();
     const starCount = 600;
@@ -185,13 +225,59 @@ export default function GlobeScene() {
       renderer.setClearColor(0x000000, 0);
       container.appendChild(renderer.domElement);
 
-      controls = new OrbitControls(camera, renderer.domElement);
+      const controls = new OrbitControls(camera, renderer.domElement);
       controls.enablePan = false;
       controls.enableDamping = true;
       controls.minDistance = 2.6;
       controls.maxDistance = 5.2;
-      controls.autoRotate = true;
-      controls.autoRotateSpeed = 0.4;
+      controls.autoRotate = false;
+      controlsRef.current = controls;
+
+      const raycaster = new THREE.Raycaster();
+      const pointer = new THREE.Vector2();
+
+      handlePointerDown = (event: PointerEvent) => {
+        if (!renderer) {
+          return;
+        }
+
+        const rect = renderer.domElement.getBoundingClientRect();
+        pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+        pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+        raycaster.setFromCamera(pointer, camera);
+        const hits = raycaster.intersectObjects(
+          markers.map((marker) => marker.mesh),
+          false,
+        );
+
+        if (hits.length > 0) {
+          const hitMarker = hits[0].object as THREE.Mesh;
+          const caseFile = hitMarker.userData.caseFile as CaseFile | undefined;
+          if (caseFile) {
+            const found = markers.find(
+              (marker) => marker.caseFile.id === caseFile.id,
+            );
+            activeMarkerRef.current = found ?? null;
+            pauseRotationRef.current = true;
+            controls.enableRotate = false;
+            targetQuaternionRef.current = new THREE.Quaternion().setFromUnitVectors(
+              (found?.mesh.position ?? hitMarker.position).clone().normalize(),
+              new THREE.Vector3(0, 0, 1),
+            );
+            if (closeTimeoutRef.current) {
+              window.clearTimeout(closeTimeoutRef.current);
+              closeTimeoutRef.current = null;
+            }
+            setActiveCase(caseFile);
+            setPanelVisible(true);
+          }
+        } else if (activeCaseRef.current) {
+          closeActiveCase();
+        }
+      };
+
+      renderer.domElement.addEventListener("pointerdown", handlePointerDown);
 
       const render = (time: number) => {
         const pulse = Math.sin(time * 0.0015);
@@ -201,10 +287,49 @@ export default function GlobeScene() {
           marker.ring.material.opacity = 0.45 + 0.25 * (pulse + 1) * 0.5;
         });
 
-        globe.rotation.y += 0.0008;
-        wireframe.rotation.y += 0.0008;
-        controls?.update();
+        if (targetQuaternionRef.current) {
+          globeGroup.quaternion.slerp(targetQuaternionRef.current, 0.08);
+          if (
+            globeGroup.quaternion.angleTo(targetQuaternionRef.current) < 0.001
+          ) {
+            globeGroup.quaternion.copy(targetQuaternionRef.current);
+            targetQuaternionRef.current = null;
+          }
+        } else if (!pauseRotationRef.current) {
+          globeGroup.rotation.y += 0.0006;
+        }
+        controls.update();
         renderer?.render(scene, camera);
+
+        const activeMarker = activeMarkerRef.current;
+        if (
+          activeMarker &&
+          lineRef.current &&
+          cardRef.current &&
+          containerRef.current
+        ) {
+          const markerPosition = new THREE.Vector3();
+          activeMarker.mesh.getWorldPosition(markerPosition);
+          markerPosition.project(camera);
+
+          const containerRect = containerRef.current.getBoundingClientRect();
+          const cardRect = cardRef.current.getBoundingClientRect();
+          const markerX =
+            (markerPosition.x * 0.5 + 0.5) * containerRect.width;
+          const markerY =
+            (-markerPosition.y * 0.5 + 0.5) * containerRect.height;
+          const anchorX = cardRect.left - containerRect.left + 24;
+          const anchorY = cardRect.top - containerRect.top + 40;
+
+          const dx = anchorX - markerX;
+          const dy = anchorY - markerY;
+          const length = Math.hypot(dx, dy);
+          const angle = Math.atan2(dy, dx);
+
+          lineRef.current.style.width = `${length}px`;
+          lineRef.current.style.transform = `translate(${markerX}px, ${markerY}px) rotate(${angle}rad)`;
+        }
+
         animationFrame = window.requestAnimationFrame(render);
       };
 
@@ -232,7 +357,11 @@ export default function GlobeScene() {
       if (animationFrame) {
         window.cancelAnimationFrame(animationFrame);
       }
-      controls?.dispose();
+      controlsRef.current?.dispose();
+      controlsRef.current = null;
+      if (renderer?.domElement && handlePointerDown) {
+        renderer.domElement.removeEventListener("pointerdown", handlePointerDown);
+      }
       renderer?.dispose();
       renderer?.domElement.remove();
       globeGeometry.dispose();
@@ -261,6 +390,14 @@ export default function GlobeScene() {
         }
       });
     };
+  }, [closeActiveCase]);
+
+  useEffect(() => {
+    return () => {
+      if (closeTimeoutRef.current) {
+        window.clearTimeout(closeTimeoutRef.current);
+      }
+    };
   }, []);
 
   return (
@@ -269,6 +406,28 @@ export default function GlobeScene() {
         <div className={styles.fallback}>
           WebGPU is not supported in this browser. Please use a recent
           Chromium-based browser to view the live globe.
+        </div>
+      )}
+      {activeCase && (
+        <div
+          className={`${styles.overlay} ${
+            panelVisible ? styles.overlayVisible : styles.overlayHidden
+          }`}
+        >
+          <div className={styles.connector} ref={lineRef} />
+          <div className={styles.card} ref={cardRef}>
+            <button
+              className={styles.closeButton}
+              type="button"
+              onClick={closeActiveCase}
+              aria-label="Close case file"
+            >
+              ✕
+            </button>
+            <GlassPanel>
+              <CaseCard caseFile={activeCase} />
+            </GlassPanel>
+          </div>
         </div>
       )}
     </div>
