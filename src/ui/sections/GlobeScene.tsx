@@ -15,6 +15,18 @@ import { feature } from "topojson-client";
 const CAMERA_DISTANCE = 3.6;
 const GLOBE_RADIUS = 1.55;
 const GLOBE_ROTATION_OFFSET = -Math.PI / 2;
+const INTRO_DURATION = 7000;
+const INTRO_PHASES = {
+  galaxyIn: 900,
+  galaxyOut: 3600,
+  solarIn: 2100,
+  solarOut: 5200,
+  earthReveal: 4700,
+};
+
+const clamp01 = (value: number) => Math.min(Math.max(value, 0), 1);
+const easeInOutCubic = (t: number) =>
+  t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 
 type MarkerMesh = {
   mesh: THREE.Mesh;
@@ -79,6 +91,8 @@ export default function GlobeScene() {
       return;
     }
 
+    pauseRotationRef.current = true;
+
     let renderer: WebGPURenderer | null = null;
     let animationFrame = 0;
     let isDisposed = false;
@@ -89,13 +103,214 @@ export default function GlobeScene() {
       45,
       container.clientWidth / container.clientHeight,
       0.1,
-      100,
+      450,
     );
-    camera.position.set(0, 0, CAMERA_DISTANCE);
+    const cameraStart = new THREE.Vector3(0, 0, 220);
+    const cameraEnd = new THREE.Vector3(0, 0, CAMERA_DISTANCE);
+    camera.position.copy(cameraStart);
 
     const globeGroup = new THREE.Group();
     globeGroup.rotation.y = GLOBE_ROTATION_OFFSET;
     scene.add(globeGroup);
+
+    const introGroup = new THREE.Group();
+    scene.add(introGroup);
+
+    const galaxyGeometry = new THREE.BufferGeometry();
+    const galaxyCount = 5200;
+    const galaxyPositions = new Float32Array(galaxyCount * 3);
+    const galaxyColors = new Float32Array(galaxyCount * 3);
+    const galaxyRadius = 140;
+    const galaxyArms = 4;
+    for (let i = 0; i < galaxyCount; i += 1) {
+      const radius = Math.pow(Math.random(), 0.6) * galaxyRadius;
+      const armAngle =
+        (i % galaxyArms) * ((Math.PI * 2) / galaxyArms) + radius * 0.06;
+      const scatter = (Math.random() - 0.5) * 0.8;
+      const angle = armAngle + scatter;
+      const height = (Math.random() - 0.5) * 12 * (1 - radius / galaxyRadius);
+      galaxyPositions[i * 3] = Math.cos(angle) * radius;
+      galaxyPositions[i * 3 + 1] = height;
+      galaxyPositions[i * 3 + 2] = Math.sin(angle) * radius;
+
+      const coreMix = 1 - radius / galaxyRadius;
+      const baseColor = new THREE.Color().setHSL(0.58, 0.7, 0.55 + coreMix * 0.3);
+      galaxyColors[i * 3] = baseColor.r;
+      galaxyColors[i * 3 + 1] = baseColor.g;
+      galaxyColors[i * 3 + 2] = baseColor.b;
+    }
+    galaxyGeometry.setAttribute(
+      "position",
+      new THREE.BufferAttribute(galaxyPositions, 3),
+    );
+    galaxyGeometry.setAttribute(
+      "color",
+      new THREE.BufferAttribute(galaxyColors, 3),
+    );
+    const galaxyMaterial = new THREE.PointsMaterial({
+      size: 0.55,
+      vertexColors: true,
+      transparent: true,
+      opacity: 0,
+      depthWrite: false,
+    });
+    const galaxyPoints = new THREE.Points(galaxyGeometry, galaxyMaterial);
+    galaxyPoints.rotation.x = -0.35;
+    introGroup.add(galaxyPoints);
+
+    const solarSystemGroup = new THREE.Group();
+    solarSystemGroup.rotation.x = 0.15;
+    introGroup.add(solarSystemGroup);
+    const planetMaterials: THREE.MeshStandardMaterial[] = [];
+    const planetGeometries: THREE.SphereGeometry[] = [];
+
+    const sunGeometry = new THREE.SphereGeometry(2.1, 32, 32);
+    const sunMaterial = new THREE.MeshStandardMaterial({
+      color: new THREE.Color("#ffcc7a"),
+      emissive: new THREE.Color("#ffb347"),
+      emissiveIntensity: 1.2,
+      transparent: true,
+      opacity: 0,
+    });
+    const sun = new THREE.Mesh(sunGeometry, sunMaterial);
+    const sunPosition = new THREE.Vector3(6, 3, 104);
+    sun.position.copy(sunPosition);
+    solarSystemGroup.add(sun);
+
+    const sunLight = new THREE.PointLight(0xffcf87, 1.2, 120, 2);
+    sunLight.position.copy(sunPosition);
+    solarSystemGroup.add(sunLight);
+
+    const saturnGeometry = new THREE.SphereGeometry(1.25, 28, 28);
+    const saturnMaterial = new THREE.MeshStandardMaterial({
+      color: new THREE.Color("#d8b48a"),
+      roughness: 0.7,
+      metalness: 0.1,
+      transparent: true,
+      opacity: 0,
+    });
+    const saturn = new THREE.Mesh(saturnGeometry, saturnMaterial);
+    const saturnPosition = new THREE.Vector3(6.2, -0.6, 40);
+    saturn.position.copy(saturnPosition);
+    solarSystemGroup.add(saturn);
+
+    const saturnRingGeometry = new THREE.RingGeometry(1.8, 2.9, 64);
+    const saturnRingMaterial = new THREE.MeshStandardMaterial({
+      color: new THREE.Color("#e1c49a"),
+      transparent: true,
+      opacity: 0,
+      side: THREE.DoubleSide,
+    });
+    const saturnRing = new THREE.Mesh(saturnRingGeometry, saturnRingMaterial);
+    saturnRing.position.copy(saturnPosition);
+    saturnRing.rotation.x = Math.PI * 0.55;
+    saturnRing.rotation.y = Math.PI * 0.2;
+    saturnRing.rotation.z = Math.PI * 0.1;
+    solarSystemGroup.add(saturnRing);
+
+    const orbitMaterial = new THREE.LineBasicMaterial({
+      color: new THREE.Color("#5fd8ff"),
+      transparent: true,
+      opacity: 0,
+    });
+    const orbitCurve = new THREE.EllipseCurve(
+      0,
+      0,
+      12,
+      7,
+      0,
+      Math.PI * 2,
+      false,
+      0,
+    );
+    const orbitPoints = orbitCurve.getPoints(120);
+    orbitPoints.push(orbitPoints[0].clone());
+    const orbitGeometry = new THREE.BufferGeometry().setFromPoints(orbitPoints);
+    const orbitLine = new THREE.Line(orbitGeometry, orbitMaterial);
+    orbitLine.rotation.x = Math.PI * 0.35;
+    orbitLine.rotation.z = Math.PI * 0.1;
+    orbitLine.position.copy(sunPosition);
+    solarSystemGroup.add(orbitLine);
+
+    const addPlanet = (options: {
+      radius: number;
+      color: string;
+      position: THREE.Vector3;
+    }) => {
+      const geometry = new THREE.SphereGeometry(options.radius, 22, 22);
+      const material = new THREE.MeshStandardMaterial({
+        color: new THREE.Color(options.color),
+        roughness: 0.6,
+        metalness: 0.1,
+        transparent: true,
+        opacity: 0,
+      });
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.position.copy(options.position);
+      solarSystemGroup.add(mesh);
+      planetGeometries.push(geometry);
+      planetMaterials.push(material);
+    };
+
+    addPlanet({
+      radius: 0.22,
+      color: "#a3927a",
+      position: new THREE.Vector3(-2.6, 0.5, 82),
+    });
+    addPlanet({
+      radius: 0.42,
+      color: "#d6b48a",
+      position: new THREE.Vector3(2.8, -0.2, 74),
+    });
+    addPlanet({
+      radius: 0.32,
+      color: "#b5644d",
+      position: new THREE.Vector3(-2.1, 0.3, 62),
+    });
+    addPlanet({
+      radius: 0.95,
+      color: "#d7b18a",
+      position: new THREE.Vector3(3.4, -0.6, 52),
+    });
+    addPlanet({
+      radius: 0.62,
+      color: "#8cc2d6",
+      position: new THREE.Vector3(-3.2, -0.8, 30),
+    });
+    addPlanet({
+      radius: 0.58,
+      color: "#5b76d6",
+      position: new THREE.Vector3(2.4, 0.4, 22),
+    });
+
+    const earthIntroGeometry = new THREE.SphereGeometry(GLOBE_RADIUS, 32, 32);
+    const earthIntroMaterial = new THREE.MeshStandardMaterial({
+      color: new THREE.Color("#2f7dd9"),
+      emissive: new THREE.Color("#1a4f99"),
+      emissiveIntensity: 0.35,
+      roughness: 0.55,
+      metalness: 0.1,
+      transparent: true,
+      opacity: 0,
+    });
+    const earthIntro = new THREE.Mesh(earthIntroGeometry, earthIntroMaterial);
+    earthIntro.position.set(0, 0, 0);
+    solarSystemGroup.add(earthIntro);
+
+    const moonGeometry = new THREE.SphereGeometry(0.28, 20, 20);
+    const moonMaterial = new THREE.MeshStandardMaterial({
+      color: new THREE.Color("#cfd6e0"),
+      roughness: 0.85,
+      metalness: 0.05,
+      transparent: true,
+      opacity: 0,
+    });
+    const moon = new THREE.Mesh(moonGeometry, moonMaterial);
+    moon.position.set(GLOBE_RADIUS + 0.55, 0.15, 0);
+    const moonGroup = new THREE.Group();
+    moonGroup.position.set(0, 0, 0);
+    moonGroup.add(moon);
+    solarSystemGroup.add(moonGroup);
 
     const globeGeometry = new THREE.SphereGeometry(GLOBE_RADIUS, 96, 96);
     const globeMaterial = new THREE.MeshStandardMaterial({
@@ -103,24 +318,28 @@ export default function GlobeScene() {
       roughness: 0.5,
       metalness: 0.15,
       emissive: new THREE.Color("#0b1f33"),
+      transparent: true,
+      opacity: 0,
     });
     const globe = new THREE.Mesh(globeGeometry, globeMaterial);
     globeGroup.add(globe);
 
+    const wireframeBaseOpacity = 0.25;
     const wireframeMaterial = new THREE.MeshBasicMaterial({
       color: new THREE.Color("#1d4761"),
       wireframe: true,
       transparent: true,
-      opacity: 0.25,
+      opacity: 0,
     });
     const wireframe = new THREE.Mesh(globeGeometry, wireframeMaterial);
     globeGroup.add(wireframe);
 
+    const atmosphereBaseOpacity = 0.18;
     const atmosphereGeometry = new THREE.SphereGeometry(GLOBE_RADIUS * 1.04, 96, 96);
     const atmosphereMaterial = new THREE.MeshBasicMaterial({
       color: new THREE.Color("#3bb9ff"),
       transparent: true,
-      opacity: 0.18,
+      opacity: 0,
       side: THREE.BackSide,
     });
     const atmosphere = new THREE.Mesh(atmosphereGeometry, atmosphereMaterial);
@@ -131,6 +350,12 @@ export default function GlobeScene() {
     keyLight.position.set(4, 2, 3);
     scene.add(ambientLight, keyLight);
 
+    let introStart = 0;
+    let introComplete = false;
+
+    const cameraPosition = new THREE.Vector3();
+    const cameraLookAt = new THREE.Vector3(0, 0, 0);
+
     const markerGroup = new THREE.Group();
     const markers: MarkerMesh[] = [];
     let countryLines: THREE.LineSegments | null = null;
@@ -138,12 +363,17 @@ export default function GlobeScene() {
     let countryGeometry: THREE.BufferGeometry | null = null;
     let countryMaterial: THREE.LineBasicMaterial | null = null;
     let countryGlowMaterial: THREE.LineBasicMaterial | null = null;
+    const countryBaseOpacity = 0.38;
+    const countryGlowBaseOpacity = 0.16;
     const markerGeometry = new THREE.SphereGeometry(0.015, 16, 16);
     cases.forEach((caseFile, index) => {
       const markerMaterial = new THREE.MeshStandardMaterial({
         color: new THREE.Color("#60e4ff"),
         emissive: new THREE.Color("#60e4ff"),
         emissiveIntensity: 1.1,
+        transparent: true,
+        opacity: 0,
+        depthWrite: false,
       });
 
       const marker = new THREE.Mesh(markerGeometry, markerMaterial);
@@ -244,14 +474,14 @@ export default function GlobeScene() {
         countryMaterial = new THREE.LineBasicMaterial({
           color: new THREE.Color("#60e4ff"),
           transparent: true,
-          opacity: 0.38,
+          opacity: 0,
           depthWrite: false,
         });
 
         countryGlowMaterial = new THREE.LineBasicMaterial({
           color: new THREE.Color("#60e4ff"),
           transparent: true,
-          opacity: 0.16,
+          opacity: 0,
           depthWrite: false,
         });
 
@@ -298,6 +528,8 @@ export default function GlobeScene() {
       controls.minDistance = 2.6;
       controls.maxDistance = 5.2;
       controls.autoRotate = false;
+      controls.enabled = false;
+      controls.enableRotate = false;
       controlsRef.current = controls;
 
       const raycaster = new THREE.Raycaster();
@@ -305,6 +537,9 @@ export default function GlobeScene() {
 
       handlePointerDown = (event: PointerEvent) => {
         if (!renderer) {
+          return;
+        }
+        if (!introComplete) {
           return;
         }
 
@@ -347,23 +582,116 @@ export default function GlobeScene() {
       renderer.domElement.addEventListener("pointerdown", handlePointerDown);
 
       const render = (time: number) => {
+        if (!introStart) {
+          introStart = time;
+        }
+
+        const introElapsed = time - introStart;
+        const introProgress = easeInOutCubic(
+          clamp01(introElapsed / INTRO_DURATION),
+        );
+        const introActive = introElapsed < INTRO_DURATION;
+        const galaxyFadeIn = easeInOutCubic(
+          clamp01(introElapsed / INTRO_PHASES.galaxyIn),
+        );
+        const galaxyFadeOut =
+          1 -
+          easeInOutCubic(
+            clamp01((introElapsed - INTRO_PHASES.galaxyOut) / 1800),
+          );
+        const galaxyOpacity = galaxyFadeIn * galaxyFadeOut;
+        const solarFadeIn = easeInOutCubic(
+          clamp01((introElapsed - INTRO_PHASES.solarIn) / 1200),
+        );
+        const solarFadeOut =
+          1 -
+          easeInOutCubic(
+            clamp01((introElapsed - INTRO_PHASES.solarOut) / 1200),
+          );
+        const solarOpacity = solarFadeIn * solarFadeOut;
+        const detailReveal = easeInOutCubic(
+          clamp01((introElapsed - INTRO_PHASES.earthReveal) / 1200),
+        );
+
+        galaxyMaterial.opacity = introActive ? galaxyOpacity : 0;
+        sunMaterial.opacity = introActive ? solarOpacity : 0;
+        saturnMaterial.opacity = introActive ? solarOpacity : 0;
+        saturnRingMaterial.opacity = introActive ? solarOpacity * 0.95 : 0;
+        orbitMaterial.opacity = introActive ? solarOpacity * 0.35 : 0;
+        sunLight.intensity = introActive ? 1.2 * solarOpacity : 0;
+        planetMaterials.forEach((material) => {
+          material.opacity = introActive ? solarOpacity : 0;
+        });
+        earthIntroMaterial.opacity = introActive
+          ? solarOpacity * (1 - detailReveal)
+          : 0;
+        moonMaterial.opacity = earthIntroMaterial.opacity;
+
+        if (introActive) {
+          galaxyPoints.rotation.y += 0.00008;
+          solarSystemGroup.rotation.y += 0.0002;
+          moonGroup.rotation.y += 0.0022;
+        }
+
+        wireframeMaterial.opacity = wireframeBaseOpacity * (introActive ? detailReveal : 1);
+        atmosphereMaterial.opacity =
+          atmosphereBaseOpacity * (introActive ? detailReveal : 1);
+        globeMaterial.emissiveIntensity = 0.25 + 0.75 * (introActive ? detailReveal : 1);
+        globeMaterial.opacity = introActive ? detailReveal : 1;
+        globe.visible = !introActive || detailReveal > 0.02;
+
+        if (countryMaterial) {
+          countryMaterial.opacity = countryBaseOpacity * (introActive ? detailReveal : 1);
+        }
+        if (countryGlowMaterial) {
+          countryGlowMaterial.opacity =
+            countryGlowBaseOpacity * (introActive ? detailReveal : 1);
+        }
+
         markers.forEach((marker) => {
           const scale = 1 + 0.25 * Math.sin(time * 0.002 + marker.phase);
           marker.mesh.scale.setScalar(scale);
+          const markerMaterial = marker.mesh
+            .material as THREE.MeshStandardMaterial;
+          markerMaterial.opacity = introActive ? detailReveal : 1;
         });
 
-        if (targetQuaternionRef.current) {
-          globeGroup.quaternion.slerp(targetQuaternionRef.current, 0.08);
-          if (
-            globeGroup.quaternion.angleTo(targetQuaternionRef.current) < 0.001
-          ) {
-            globeGroup.quaternion.copy(targetQuaternionRef.current);
-            targetQuaternionRef.current = null;
+        ambientLight.intensity = 0.25 + 0.35 * (introActive ? detailReveal : 1);
+        keyLight.intensity = 0.6 + 0.4 * (introActive ? detailReveal : 1);
+
+        if (introActive) {
+          cameraPosition.lerpVectors(cameraStart, cameraEnd, introProgress);
+          camera.position.copy(cameraPosition);
+          camera.lookAt(cameraLookAt);
+        } else if (!introComplete) {
+          introComplete = true;
+          introGroup.visible = false;
+          camera.position.copy(cameraEnd);
+          camera.lookAt(cameraLookAt);
+          pauseRotationRef.current = false;
+          if (controlsRef.current) {
+            controlsRef.current.enabled = true;
+            controlsRef.current.enableRotate = true;
+            controlsRef.current.target.set(0, 0, 0);
+            controlsRef.current.update();
           }
-        } else if (!pauseRotationRef.current) {
-          globeGroup.rotation.y += 0.0006;
         }
-        controls.update();
+
+        if (introComplete) {
+          if (targetQuaternionRef.current) {
+            globeGroup.quaternion.slerp(targetQuaternionRef.current, 0.08);
+            if (
+              globeGroup.quaternion.angleTo(targetQuaternionRef.current) < 0.001
+            ) {
+              globeGroup.quaternion.copy(targetQuaternionRef.current);
+              targetQuaternionRef.current = null;
+            }
+          } else if (!pauseRotationRef.current) {
+            globeGroup.rotation.y += 0.0006;
+          }
+          controlsRef.current?.update();
+        }
+
         renderer?.render(scene, camera);
 
         const activeMarker = activeMarkerRef.current;
@@ -444,6 +772,24 @@ export default function GlobeScene() {
           meshMaterial.dispose();
         }
       });
+
+      scene.remove(introGroup);
+      galaxyGeometry.dispose();
+      galaxyMaterial.dispose();
+      sunGeometry.dispose();
+      sunMaterial.dispose();
+      saturnGeometry.dispose();
+      saturnMaterial.dispose();
+      saturnRingGeometry.dispose();
+      saturnRingMaterial.dispose();
+      orbitGeometry.dispose();
+      orbitMaterial.dispose();
+      earthIntroGeometry.dispose();
+      earthIntroMaterial.dispose();
+      moonGeometry.dispose();
+      moonMaterial.dispose();
+      planetGeometries.forEach((geometry) => geometry.dispose());
+      planetMaterials.forEach((material) => material.dispose());
 
       if (countryLines) {
         globeGroup.remove(countryLines);
