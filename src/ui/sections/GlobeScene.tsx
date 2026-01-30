@@ -666,6 +666,9 @@ export default function GlobeScene() {
         } else if (!introComplete) {
           introComplete = true;
           introGroup.visible = false;
+          globeMaterial.opacity = 1;
+          globeMaterial.transparent = false;
+          globeMaterial.needsUpdate = true;
           camera.position.copy(cameraEnd);
           camera.lookAt(cameraLookAt);
           pauseRotationRef.current = false;
