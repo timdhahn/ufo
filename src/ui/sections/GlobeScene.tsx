@@ -28,6 +28,26 @@ const clamp01 = (value: number) => Math.min(Math.max(value, 0), 1);
 const easeInOutCubic = (t: number) =>
   t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 
+const getQualitySettings = (width: number) => {
+  const isCompact = width < 720;
+  return {
+    isCompact,
+    maxPixelRatio: isCompact ? 1.4 : 2,
+    globeSegments: isCompact ? 64 : 96,
+    introSegments: isCompact ? 24 : 32,
+    atmosphereSegments: isCompact ? 64 : 96,
+    markerSegments: isCompact ? 12 : 16,
+    starCount: isCompact ? 420 : 600,
+    galaxyCount: isCompact ? 3200 : 5200,
+    planetSegments: isCompact ? 16 : 22,
+    moonSegments: isCompact ? 14 : 20,
+    sunSegments: isCompact ? 24 : 32,
+    saturnSegments: isCompact ? 18 : 28,
+    ringSegments: isCompact ? 40 : 64,
+    orbitPoints: isCompact ? 80 : 120,
+  };
+};
+
 type MarkerMesh = {
   mesh: THREE.Mesh;
   phase: number;
@@ -106,6 +126,8 @@ export default function GlobeScene() {
 
     const shouldSkipIntro = !shouldPlayIntro;
     pauseRotationRef.current = true;
+    const containerWidth = container.clientWidth || window.innerWidth;
+    const quality = getQualitySettings(containerWidth);
 
     let renderer: WebGPURenderer | null = null;
     let animationFrame = 0;
@@ -131,7 +153,7 @@ export default function GlobeScene() {
     scene.add(introGroup);
 
     const galaxyGeometry = new THREE.BufferGeometry();
-    const galaxyCount = 5200;
+    const galaxyCount = quality.galaxyCount;
     const galaxyPositions = new Float32Array(galaxyCount * 3);
     const galaxyColors = new Float32Array(galaxyCount * 3);
     const galaxyRadius = 140;
@@ -178,7 +200,11 @@ export default function GlobeScene() {
     const planetMaterials: THREE.MeshStandardMaterial[] = [];
     const planetGeometries: THREE.SphereGeometry[] = [];
 
-    const sunGeometry = new THREE.SphereGeometry(2.1, 32, 32);
+    const sunGeometry = new THREE.SphereGeometry(
+      2.1,
+      quality.sunSegments,
+      quality.sunSegments,
+    );
     const sunMaterial = new THREE.MeshStandardMaterial({
       color: new THREE.Color("#ffcc7a"),
       emissive: new THREE.Color("#ffb347"),
@@ -195,7 +221,11 @@ export default function GlobeScene() {
     sunLight.position.copy(sunPosition);
     solarSystemGroup.add(sunLight);
 
-    const saturnGeometry = new THREE.SphereGeometry(1.25, 28, 28);
+    const saturnGeometry = new THREE.SphereGeometry(
+      1.25,
+      quality.saturnSegments,
+      quality.saturnSegments,
+    );
     const saturnMaterial = new THREE.MeshStandardMaterial({
       color: new THREE.Color("#d8b48a"),
       roughness: 0.7,
@@ -208,7 +238,11 @@ export default function GlobeScene() {
     saturn.position.copy(saturnPosition);
     solarSystemGroup.add(saturn);
 
-    const saturnRingGeometry = new THREE.RingGeometry(1.8, 2.9, 64);
+    const saturnRingGeometry = new THREE.RingGeometry(
+      1.8,
+      2.9,
+      quality.ringSegments,
+    );
     const saturnRingMaterial = new THREE.MeshStandardMaterial({
       color: new THREE.Color("#e1c49a"),
       transparent: true,
@@ -237,7 +271,7 @@ export default function GlobeScene() {
       false,
       0,
     );
-    const orbitPoints = orbitCurve.getPoints(120);
+    const orbitPoints = orbitCurve.getPoints(quality.orbitPoints);
     orbitPoints.push(orbitPoints[0].clone());
     const orbitGeometry = new THREE.BufferGeometry().setFromPoints(orbitPoints);
     const orbitLine = new THREE.Line(orbitGeometry, orbitMaterial);
@@ -251,7 +285,11 @@ export default function GlobeScene() {
       color: string;
       position: THREE.Vector3;
     }) => {
-      const geometry = new THREE.SphereGeometry(options.radius, 22, 22);
+      const geometry = new THREE.SphereGeometry(
+        options.radius,
+        quality.planetSegments,
+        quality.planetSegments,
+      );
       const material = new THREE.MeshStandardMaterial({
         color: new THREE.Color(options.color),
         roughness: 0.6,
@@ -297,7 +335,11 @@ export default function GlobeScene() {
       position: new THREE.Vector3(2.4, 0.4, 22),
     });
 
-    const earthIntroGeometry = new THREE.SphereGeometry(GLOBE_RADIUS, 32, 32);
+    const earthIntroGeometry = new THREE.SphereGeometry(
+      GLOBE_RADIUS,
+      quality.introSegments,
+      quality.introSegments,
+    );
     const earthIntroMaterial = new THREE.MeshStandardMaterial({
       color: new THREE.Color("#2f7dd9"),
       emissive: new THREE.Color("#1a4f99"),
@@ -311,7 +353,11 @@ export default function GlobeScene() {
     earthIntro.position.set(0, 0, 0);
     solarSystemGroup.add(earthIntro);
 
-    const moonGeometry = new THREE.SphereGeometry(0.28, 20, 20);
+    const moonGeometry = new THREE.SphereGeometry(
+      0.28,
+      quality.moonSegments,
+      quality.moonSegments,
+    );
     const moonMaterial = new THREE.MeshStandardMaterial({
       color: new THREE.Color("#cfd6e0"),
       roughness: 0.85,
@@ -326,7 +372,11 @@ export default function GlobeScene() {
     moonGroup.add(moon);
     solarSystemGroup.add(moonGroup);
 
-    const globeGeometry = new THREE.SphereGeometry(GLOBE_RADIUS, 96, 96);
+    const globeGeometry = new THREE.SphereGeometry(
+      GLOBE_RADIUS,
+      quality.globeSegments,
+      quality.globeSegments,
+    );
     const globeMaterial = new THREE.MeshStandardMaterial({
       color: new THREE.Color("#0a1524"),
       roughness: 0.5,
@@ -349,7 +399,11 @@ export default function GlobeScene() {
     globeGroup.add(wireframe);
 
     const atmosphereBaseOpacity = 0.18;
-    const atmosphereGeometry = new THREE.SphereGeometry(GLOBE_RADIUS * 1.04, 96, 96);
+    const atmosphereGeometry = new THREE.SphereGeometry(
+      GLOBE_RADIUS * 1.04,
+      quality.atmosphereSegments,
+      quality.atmosphereSegments,
+    );
     const atmosphereMaterial = new THREE.MeshBasicMaterial({
       color: new THREE.Color("#3bb9ff"),
       transparent: true,
@@ -399,7 +453,11 @@ export default function GlobeScene() {
     let countryGlowMaterial: THREE.LineBasicMaterial | null = null;
     const countryBaseOpacity = 0.38;
     const countryGlowBaseOpacity = 0.16;
-    const markerGeometry = new THREE.SphereGeometry(0.015, 16, 16);
+    const markerGeometry = new THREE.SphereGeometry(
+      0.015,
+      quality.markerSegments,
+      quality.markerSegments,
+    );
     cases.forEach((caseFile, index) => {
       const markerMaterial = new THREE.MeshStandardMaterial({
         color: new THREE.Color("#60e4ff"),
@@ -427,7 +485,7 @@ export default function GlobeScene() {
     globeGroup.add(markerGroup);
 
     const starsGeometry = new THREE.BufferGeometry();
-    const starCount = 600;
+    const starCount = quality.starCount;
     const starPositions = new Float32Array(starCount * 3);
     for (let i = 0; i < starCount; i += 1) {
       const radius = 12 + Math.random() * 10;
@@ -529,7 +587,7 @@ export default function GlobeScene() {
     };
 
     renderer = new WebGPURenderer({
-      antialias: true,
+      antialias: !quality.isCompact,
       alpha: true,
     });
 
@@ -550,7 +608,9 @@ export default function GlobeScene() {
       if (isDisposed) {
         return;
       }
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setPixelRatio(
+        Math.min(window.devicePixelRatio, quality.maxPixelRatio),
+      );
       renderer.setSize(container.clientWidth, container.clientHeight);
       renderer.setClearColor(0x000000, 0);
       container.appendChild(renderer.domElement);
@@ -769,6 +829,9 @@ export default function GlobeScene() {
       const { clientWidth, clientHeight } = container;
       camera.aspect = clientWidth / clientHeight;
       camera.updateProjectionMatrix();
+      renderer.setPixelRatio(
+        Math.min(window.devicePixelRatio, quality.maxPixelRatio),
+      );
       renderer.setSize(clientWidth, clientHeight);
     };
 

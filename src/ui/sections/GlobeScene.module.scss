@@ -80,12 +80,13 @@
   pointer-events: auto;
 }
 
-
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   .card {
+    bottom: 1.5rem;
     left: 50%;
     right: auto;
+    top: auto;
     transform: translate(-50%, 0);
-    width: min(90vw, 340px);
+    width: min(90vw, 360px);
   }
 }

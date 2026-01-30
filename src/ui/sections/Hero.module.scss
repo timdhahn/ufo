@@ -30,7 +30,7 @@
 }
 
 .subtitle {
-  color: rgba(233, 245, 255, 0.75);
+  color: rgba(233, 245, 255, 0.82);
   font-size: 1.1rem;
   max-width: 32rem;
 }
@@ -73,6 +73,11 @@
 }
 
 .globeWrap {
+  height: 100%;
+  min-height: 320px;
+}
+
+.globeMount {
   height: 100%;
   min-height: 320px;
 }

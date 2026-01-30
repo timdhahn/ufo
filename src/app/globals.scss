@@ -4,6 +4,8 @@
   color-scheme: dark;
   --background: #06080f;
   --foreground: #e7f6ff;
+  --focus-ring: rgba(96, 228, 255, 0.85);
+  --focus-glow: rgba(96, 228, 255, 0.35);
 }
 
 html {
@@ -29,6 +31,16 @@ body {
 
 a {
   color: inherit;
+}
+
+a:focus-visible,
+button:focus-visible,
+[role="button"]:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--focus-ring), 0 0 12px var(--focus-glow);
 }
 
 * {

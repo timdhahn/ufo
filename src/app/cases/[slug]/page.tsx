@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import styles from "./page.module.scss";
 import { getCaseBySlug, getCases } from "@/services/caseService";
@@ -23,6 +24,10 @@ export default async function CasePage({ params }: CasePageProps) {
   }
 
   const primaryMedia = caseFile.media[0];
+  const mediaLabel = primaryMedia?.type === "video" ? "PLAY" : "VIEW";
+  const mediaImage =
+    primaryMedia?.type === "image" ? primaryMedia.src : "/textures/earth-day.png";
+  const mediaAlt = primaryMedia?.caption ?? "Case media placeholder";
 
   return (
     <main className={styles.page}>
@@ -37,11 +42,21 @@ export default async function CasePage({ params }: CasePageProps) {
 
       <section className={styles.contentGrid}>
         <GlassPanel className={styles.mediaPanel}>
-          <div className={styles.mediaPlaceholder}>
-            <div className={styles.mediaIcon}>PLAY</div>
-            <div>
-              {primaryMedia?.type ?? "media"} placeholder
-              {primaryMedia?.caption ? ` - ${primaryMedia.caption}` : ""}
+          <div className={styles.mediaFrame}>
+            <Image
+              alt={mediaAlt}
+              className={styles.mediaImage}
+              fill
+              priority={false}
+              sizes="(max-width: 768px) 90vw, (max-width: 1200px) 45vw, 520px"
+              src={mediaImage}
+            />
+            <div className={styles.mediaOverlay}>
+              <div className={styles.mediaIcon}>{mediaLabel}</div>
+              <div>
+                {primaryMedia?.type ?? "media"} placeholder
+                {primaryMedia?.caption ? ` - ${primaryMedia.caption}` : ""}
+              </div>
             </div>
           </div>
         </GlassPanel>
