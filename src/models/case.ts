@@ -16,6 +16,7 @@ export type CaseFile = {
   location: string;
   coordinates: [number, number];
   summary: string;
+  readMore?: string;
   severity: CaseSeverity;
   status: CaseStatus;
   media: CaseMedia[];

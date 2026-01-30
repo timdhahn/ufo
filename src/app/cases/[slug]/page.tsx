@@ -23,11 +23,13 @@ export default async function CasePage({ params }: CasePageProps) {
     notFound();
   }
 
-  const primaryMedia = caseFile.media[0];
+  const mediaList = caseFile.media ?? [];
+  const primaryMedia = mediaList[0];
   const mediaLabel = primaryMedia?.type === "video" ? "PLAY" : "VIEW";
   const mediaImage =
     primaryMedia?.type === "image" ? primaryMedia.src : "/textures/earth-day.png";
   const mediaAlt = primaryMedia?.caption ?? "Case media placeholder";
+  const readMore = caseFile.readMore?.split("\n\n") ?? [];
 
   return (
     <main className={styles.page}>
@@ -99,6 +101,17 @@ export default async function CasePage({ params }: CasePageProps) {
             </div>
           </div>
         </GlassPanel>
+
+        {readMore.length > 0 ? (
+          <GlassPanel className={styles.readMorePanel}>
+            <h3>Read More</h3>
+            <div className={styles.readMoreBody}>
+              {readMore.map((paragraph) => (
+                <p key={paragraph}>{paragraph}</p>
+              ))}
+            </div>
+          </GlassPanel>
+        ) : null}
       </section>
 
       <div className={styles.footer}>

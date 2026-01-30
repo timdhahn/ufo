@@ -137,7 +137,8 @@
 }
 
 .briefPanel,
-.analysisPanel {
+.analysisPanel,
+.readMorePanel {
   padding: 1.5rem;
 }
 
@@ -177,6 +178,21 @@
 .analysisPanel h3 {
   font-family: var(--font-display);
   margin: 0 0 0.75rem;
+}
+
+.readMorePanel h3 {
+  font-family: var(--font-display);
+  margin: 0 0 0.75rem;
+}
+
+.readMoreBody {
+  color: rgba(230, 244, 255, 0.82);
+  display: grid;
+  gap: 0.9rem;
+}
+
+.readMoreBody p {
+  margin: 0;
 }
 
 .timeline {
