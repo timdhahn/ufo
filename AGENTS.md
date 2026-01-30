@@ -38,7 +38,8 @@ None for the MVP (static JSON data).
 
 ## CI/CD notes
 - Keep TypeScript strict mode enabled.
-- Use dynamic import for the globe component to avoid SSR issues with WebGL.
+- Use dynamic import for the globe component to avoid SSR issues with WebGPU.
+- WebGPU requires a secure context (HTTPS) and supported browsers; plan a graceful fallback if needed.
 - Keep UI broken into reusable components under `src/ui/` and `src/ui/sections/`.
 
 ## Local dev commands (expected)
