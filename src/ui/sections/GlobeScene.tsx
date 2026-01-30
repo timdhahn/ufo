@@ -58,7 +58,12 @@ export default function GlobeScene() {
   const pauseRotationRef = useRef(false);
   const targetQuaternionRef = useRef<THREE.Quaternion | null>(null);
   const activeCaseRef = useRef<CaseFile | null>(null);
-  const [isSupported, setIsSupported] = useState(true);
+  const [isSupported, setIsSupported] = useState(() => {
+    if (typeof navigator === "undefined") {
+      return false;
+    }
+    return "gpu" in navigator;
+  });
   const [shouldPlayIntro] = useState(() => {
     if (hasPlayedIntro) {
       return false;
@@ -95,8 +100,7 @@ export default function GlobeScene() {
       return;
     }
 
-    if (!("gpu" in navigator)) {
-      setIsSupported(false);
+    if (!isSupported) {
       return;
     }
 
@@ -830,7 +834,7 @@ export default function GlobeScene() {
       renderer?.dispose();
       renderer?.domElement.remove();
     };
-  }, [closeActiveCase, shouldPlayIntro]);
+  }, [closeActiveCase, isSupported, shouldPlayIntro]);
 
   useEffect(() => {
     return () => {
