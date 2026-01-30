@@ -18,7 +18,6 @@ const GLOBE_ROTATION_OFFSET = -Math.PI / 2;
 
 type MarkerMesh = {
   mesh: THREE.Mesh;
-  ring: THREE.Mesh;
   phase: number;
   caseFile: CaseFile;
 };
@@ -140,23 +139,14 @@ export default function GlobeScene() {
     let countryMaterial: THREE.LineBasicMaterial | null = null;
     let countryGlowMaterial: THREE.LineBasicMaterial | null = null;
     const markerGeometry = new THREE.SphereGeometry(0.015, 16, 16);
-    const ringGeometry = new THREE.RingGeometry(0.026, 0.045, 32);
-
     cases.forEach((caseFile, index) => {
       const markerMaterial = new THREE.MeshStandardMaterial({
         color: new THREE.Color("#60e4ff"),
         emissive: new THREE.Color("#60e4ff"),
         emissiveIntensity: 1.1,
       });
-      const ringMaterial = new THREE.MeshBasicMaterial({
-        color: new THREE.Color("#60e4ff"),
-        transparent: true,
-        opacity: 0.6,
-        side: THREE.DoubleSide,
-      });
 
       const marker = new THREE.Mesh(markerGeometry, markerMaterial);
-      const ring = new THREE.Mesh(ringGeometry, ringMaterial);
       const position = latLongToVector3(
         caseFile.coordinates[0],
         caseFile.coordinates[1],
@@ -164,13 +154,10 @@ export default function GlobeScene() {
       );
 
       marker.position.copy(position);
-      ring.position.copy(position);
-      ring.lookAt(position.clone().multiplyScalar(1.05));
 
       marker.userData.caseFile = caseFile;
       markerGroup.add(marker);
-      markerGroup.add(ring);
-      markers.push({ mesh: marker, ring, phase: index * 0.7, caseFile });
+      markers.push({ mesh: marker, phase: index * 0.7, caseFile });
     });
 
     globeGroup.add(markerGroup);
@@ -360,11 +347,9 @@ export default function GlobeScene() {
       renderer.domElement.addEventListener("pointerdown", handlePointerDown);
 
       const render = (time: number) => {
-        const pulse = Math.sin(time * 0.0015);
         markers.forEach((marker) => {
           const scale = 1 + 0.25 * Math.sin(time * 0.002 + marker.phase);
           marker.mesh.scale.setScalar(scale);
-          marker.ring.material.opacity = 0.45 + 0.25 * (pulse + 1) * 0.5;
         });
 
         if (targetQuaternionRef.current) {
@@ -449,7 +434,6 @@ export default function GlobeScene() {
       atmosphereGeometry.dispose();
       atmosphereMaterial.dispose();
       markerGeometry.dispose();
-      ringGeometry.dispose();
       starsGeometry.dispose();
       starsMaterial.dispose();
       markers.forEach((marker) => {
@@ -458,13 +442,6 @@ export default function GlobeScene() {
           meshMaterial.forEach((material) => material.dispose());
         } else {
           meshMaterial.dispose();
-        }
-
-        const ringMaterial = marker.ring.material;
-        if (Array.isArray(ringMaterial)) {
-          ringMaterial.forEach((material) => material.dispose());
-        } else {
-          ringMaterial.dispose();
         }
       });
 
