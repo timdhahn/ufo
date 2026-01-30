@@ -34,6 +34,8 @@ type MarkerMesh = {
   caseFile: CaseFile;
 };
 
+let hasPlayedIntro = false;
+
 const cases = sortCasesByDate(getCases(), "desc");
 
 function latLongToVector3(lat: number, lon: number, radius: number) {
@@ -57,6 +59,13 @@ export default function GlobeScene() {
   const targetQuaternionRef = useRef<THREE.Quaternion | null>(null);
   const activeCaseRef = useRef<CaseFile | null>(null);
   const [isSupported, setIsSupported] = useState(true);
+  const [shouldPlayIntro] = useState(() => {
+    if (hasPlayedIntro) {
+      return false;
+    }
+    hasPlayedIntro = true;
+    return true;
+  });
   const [activeCase, setActiveCase] = useState<CaseFile | null>(null);
   const [panelVisible, setPanelVisible] = useState(false);
 
@@ -91,6 +100,7 @@ export default function GlobeScene() {
       return;
     }
 
+    const shouldSkipIntro = !shouldPlayIntro;
     pauseRotationRef.current = true;
 
     let renderer: WebGPURenderer | null = null;
@@ -350,11 +360,31 @@ export default function GlobeScene() {
     keyLight.position.set(4, 2, 3);
     scene.add(ambientLight, keyLight);
 
-    let introStart = 0;
+    let introStart: number | null = null;
     let introComplete = false;
 
     const cameraPosition = new THREE.Vector3();
     const cameraLookAt = new THREE.Vector3(0, 0, 0);
+
+    const completeIntro = () => {
+      if (introComplete) {
+        return;
+      }
+      introComplete = true;
+      introGroup.visible = false;
+      globeMaterial.opacity = 1;
+      globeMaterial.transparent = false;
+      globeMaterial.needsUpdate = true;
+      camera.position.copy(cameraEnd);
+      camera.lookAt(cameraLookAt);
+      pauseRotationRef.current = false;
+      if (controlsRef.current) {
+        controlsRef.current.enabled = true;
+        controlsRef.current.enableRotate = true;
+        controlsRef.current.target.set(0, 0, 0);
+        controlsRef.current.update();
+      }
+    };
 
     const markerGroup = new THREE.Group();
     const markers: MarkerMesh[] = [];
@@ -581,16 +611,20 @@ export default function GlobeScene() {
 
       renderer.domElement.addEventListener("pointerdown", handlePointerDown);
 
+      if (shouldSkipIntro) {
+        completeIntro();
+      }
+
       const render = (time: number) => {
-        if (!introStart) {
+        if (introStart === null) {
           introStart = time;
         }
 
         const introElapsed = time - introStart;
-        const introProgress = easeInOutCubic(
-          clamp01(introElapsed / INTRO_DURATION),
-        );
-        const introActive = introElapsed < INTRO_DURATION;
+        const introProgress = introComplete
+          ? 1
+          : easeInOutCubic(clamp01(introElapsed / INTRO_DURATION));
+        const introActive = !introComplete && introElapsed < INTRO_DURATION;
         const galaxyFadeIn = easeInOutCubic(
           clamp01(introElapsed / INTRO_PHASES.galaxyIn),
         );
@@ -599,7 +633,7 @@ export default function GlobeScene() {
           easeInOutCubic(
             clamp01((introElapsed - INTRO_PHASES.galaxyOut) / 1800),
           );
-        const galaxyOpacity = galaxyFadeIn * galaxyFadeOut;
+        const galaxyOpacity = introComplete ? 0 : galaxyFadeIn * galaxyFadeOut;
         const solarFadeIn = easeInOutCubic(
           clamp01((introElapsed - INTRO_PHASES.solarIn) / 1200),
         );
@@ -608,10 +642,12 @@ export default function GlobeScene() {
           easeInOutCubic(
             clamp01((introElapsed - INTRO_PHASES.solarOut) / 1200),
           );
-        const solarOpacity = solarFadeIn * solarFadeOut;
-        const detailReveal = easeInOutCubic(
-          clamp01((introElapsed - INTRO_PHASES.earthReveal) / 1200),
-        );
+        const solarOpacity = introComplete ? 0 : solarFadeIn * solarFadeOut;
+        const detailReveal = introComplete
+          ? 1
+          : easeInOutCubic(
+              clamp01((introElapsed - INTRO_PHASES.earthReveal) / 1200),
+            );
 
         galaxyMaterial.opacity = introActive ? galaxyOpacity : 0;
         sunMaterial.opacity = introActive ? solarOpacity : 0;
@@ -664,20 +700,7 @@ export default function GlobeScene() {
           camera.position.copy(cameraPosition);
           camera.lookAt(cameraLookAt);
         } else if (!introComplete) {
-          introComplete = true;
-          introGroup.visible = false;
-          globeMaterial.opacity = 1;
-          globeMaterial.transparent = false;
-          globeMaterial.needsUpdate = true;
-          camera.position.copy(cameraEnd);
-          camera.lookAt(cameraLookAt);
-          pauseRotationRef.current = false;
-          if (controlsRef.current) {
-            controlsRef.current.enabled = true;
-            controlsRef.current.enableRotate = true;
-            controlsRef.current.target.set(0, 0, 0);
-            controlsRef.current.update();
-          }
+          completeIntro();
         }
 
         if (introComplete) {
@@ -807,7 +830,7 @@ export default function GlobeScene() {
       renderer?.dispose();
       renderer?.domElement.remove();
     };
-  }, [closeActiveCase]);
+  }, [closeActiveCase, shouldPlayIntro]);
 
   useEffect(() => {
     return () => {
