@@ -1,0 +1,12 @@
+.panel {
+  backdrop-filter: blur(18px);
+  background: linear-gradient(
+    160deg,
+    rgba(15, 30, 54, 0.82),
+    rgba(6, 12, 24, 0.6)
+  );
+  border: 1px solid rgba(96, 228, 255, 0.35);
+  border-radius: 20px;
+  box-shadow: 0 18px 40px rgba(4, 10, 24, 0.55),
+    inset 0 0 18px rgba(96, 228, 255, 0.08);
+}

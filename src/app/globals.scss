@@ -9,7 +9,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: "Space Grotesk", "Inter", system-ui, sans-serif;
+  --font-sans: var(--font-sans), "Space Grotesk", "Inter", system-ui, sans-serif;
+  --font-display: var(--font-display), "Orbitron", "Space Grotesk", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
@@ -20,6 +21,10 @@ body {
   font-family: var(--font-sans);
   margin: 0;
   min-height: 100vh;
+}
+
+a {
+  color: inherit;
 }
 
 * {

@@ -1,5 +1,6 @@
 import styles from "./Hero.module.scss";
 import { Button } from "../components/Button";
+import { GlassPanel } from "../components/GlassPanel";
 
 export function Hero() {
   return (
@@ -16,11 +17,11 @@ export function Hero() {
           <Button label="View Methodology" href="/methodology" variant="ghost" />
         </div>
       </div>
-      <div className={styles.heroFrame}>
+      <GlassPanel className={styles.heroFrame}>
         <div className={styles.placeholder}>
-          Globe placeholder (WebGL coming next)
+          Globe placeholder (WebGPU coming next)
         </div>
-      </div>
+      </GlassPanel>
     </section>
   );
 }
