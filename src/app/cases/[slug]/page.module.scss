@@ -5,6 +5,7 @@
   min-height: 100vh;
   padding: 3rem 6vw 4rem;
   position: relative;
+  overflow: hidden;
 }
 
 .page::before {
@@ -64,7 +65,7 @@
 .contentGrid {
   display: grid;
   gap: 1.5rem;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   position: relative;
   z-index: 1;
 }
@@ -225,6 +226,10 @@
 @media (max-width: 768px) {
   .page {
     padding: 2.5rem 6vw 3rem;
+  }
+
+  .contentGrid {
+    grid-template-columns: 1fr;
   }
 }
 

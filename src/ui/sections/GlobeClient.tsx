@@ -28,6 +28,7 @@ export function GlobeClient() {
       return;
     }
 
+    const isMobile = window.matchMedia("(max-width: 900px)").matches;
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries.some((entry) => entry.isIntersecting)) {
@@ -35,7 +36,10 @@ export function GlobeClient() {
           observer.disconnect();
         }
       },
-      { rootMargin: "200px" },
+      {
+        rootMargin: isMobile ? "0px" : "200px",
+        threshold: isMobile ? 0.2 : 0,
+      },
     );
 
     observer.observe(target);
