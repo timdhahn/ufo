@@ -81,6 +81,7 @@ export default function GlobeScene() {
   const cardRef = useRef<HTMLDivElement>(null);
   const lineRef = useRef<HTMLDivElement>(null);
   const activeMarkerRef = useRef<MarkerMesh | null>(null);
+  const markersRef = useRef<MarkerMesh[]>([]);
   const controlsRef = useRef<OrbitControls | null>(null);
   const pauseRotationRef = useRef(false);
   const targetQuaternionRef = useRef<THREE.Quaternion | null>(null);
@@ -104,6 +105,7 @@ export default function GlobeScene() {
   const [activeCase, setActiveCase] = useState<CaseFile | null>(null);
   const [panelVisible, setPanelVisible] = useState(false);
   const shouldReduceMotion = useReducedMotion();
+  const canCycleCases = cases.length > 1;
 
   const closeActiveCase = useCallback(() => {
     setPanelVisible(false);
@@ -127,6 +129,50 @@ export default function GlobeScene() {
       }
     }
   }, [panelVisible]);
+
+  const focusMarker = useCallback((marker: MarkerMesh | null) => {
+    if (!marker) {
+      activeMarkerRef.current = null;
+      return;
+    }
+
+    activeMarkerRef.current = marker;
+    pauseRotationRef.current = true;
+    if (controlsRef.current) {
+      controlsRef.current.enableRotate = false;
+    }
+    targetQuaternionRef.current = new THREE.Quaternion().setFromUnitVectors(
+      marker.mesh.position.clone().normalize(),
+      new THREE.Vector3(0, 0, 1),
+    );
+  }, []);
+
+  const navigateCase = useCallback(
+    (direction: "prev" | "next") => {
+      if (!activeCaseRef.current) {
+        return;
+      }
+
+      const currentIndex = cases.findIndex(
+        (caseFile) => caseFile.id === activeCaseRef.current?.id,
+      );
+      if (currentIndex === -1) {
+        return;
+      }
+
+      const delta = direction === "next" ? 1 : -1;
+      const nextIndex = (currentIndex + delta + cases.length) % cases.length;
+      const nextCase = cases[nextIndex];
+      const nextMarker = markersRef.current.find(
+        (marker) => marker.caseFile.id === nextCase.id,
+      );
+
+      focusMarker(nextMarker ?? null);
+      setActiveCase(nextCase);
+      setPanelVisible(true);
+    },
+    [focusMarker],
+  );
 
   useEffect(() => {
     const container = containerRef.current;
@@ -519,6 +565,7 @@ export default function GlobeScene() {
       markerGroup.add(hitMesh);
       markers.push({ mesh: marker, hitMesh, phase: index * 0.7, caseFile });
     });
+    markersRef.current = markers;
 
     globeGroup.add(markerGroup);
 
@@ -711,13 +758,7 @@ export default function GlobeScene() {
           const caseFile = hitMarker.userData.caseFile as CaseFile | undefined;
           if (caseFile) {
             const found = markers.find((marker) => marker.hitMesh === hitMarker);
-            activeMarkerRef.current = found ?? null;
-            pauseRotationRef.current = true;
-            controls.enableRotate = false;
-            targetQuaternionRef.current = new THREE.Quaternion().setFromUnitVectors(
-              (found?.mesh.position ?? hitMarker.position).clone().normalize(),
-              new THREE.Vector3(0, 0, 1),
-            );
+            focusMarker(found ?? null);
             setActiveCase(caseFile);
             setPanelVisible(true);
           }
@@ -1023,6 +1064,7 @@ export default function GlobeScene() {
           meshMaterial.dispose();
         }
       });
+      markersRef.current = [];
 
       scene.remove(introGroup);
       galaxyGeometry.dispose();
@@ -1055,7 +1097,7 @@ export default function GlobeScene() {
       renderer?.dispose();
       renderer?.domElement.remove();
     };
-  }, [closeActiveCase, isSupported, shouldPlayIntro]);
+  }, [closeActiveCase, focusMarker, isSupported, shouldPlayIntro]);
 
   const overlayTransition = {
     duration: shouldReduceMotion ? 0 : 0.24,
@@ -1102,6 +1144,7 @@ export default function GlobeScene() {
           >
             <motion.div
               className={styles.connectorLine}
+              key={activeCase?.id ?? "line"}
               initial={{ scaleX: 0 }}
               animate={{ scaleX: panelVisible ? 1 : 0 }}
               transition={overlayTransition}
@@ -1116,6 +1159,24 @@ export default function GlobeScene() {
               transition={cardTransition}
               onAnimationComplete={handleOverlayAnimationComplete}
             >
+              <button
+                className={`${styles.navButton} ${styles.navButtonLeft}`}
+                type="button"
+                onClick={() => navigateCase("prev")}
+                aria-label="Previous case"
+                disabled={!canCycleCases}
+              >
+                &lt;
+              </button>
+              <button
+                className={`${styles.navButton} ${styles.navButtonRight}`}
+                type="button"
+                onClick={() => navigateCase("next")}
+                aria-label="Next case"
+                disabled={!canCycleCases}
+              >
+                &gt;
+              </button>
               <button
                 className={styles.closeButton}
                 type="button"
