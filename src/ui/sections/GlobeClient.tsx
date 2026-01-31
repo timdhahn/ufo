@@ -24,10 +24,10 @@ export function GlobeClient() {
     }
 
     if (!("IntersectionObserver" in window)) {
-      const rafId = window.requestAnimationFrame(() => {
+      const timeoutId = setTimeout(() => {
         setShouldRender(true);
-      });
-      return () => window.cancelAnimationFrame(rafId);
+      }, 0);
+      return () => clearTimeout(timeoutId);
     }
 
     const isMobile = window.matchMedia("(max-width: 900px)").matches;
