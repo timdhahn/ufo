@@ -60,6 +60,8 @@
 }
 
 .heroFrame {
+  display: flex;
+  flex-direction: column;
   position: relative;
   flex: 1;
   min-height: 420px;
@@ -73,12 +75,14 @@
 }
 
 .globeWrap {
-  height: 100%;
+  display: flex;
+  flex: 1 1 320px;
   min-height: 320px;
 }
 
 .globeMount {
-  height: 100%;
+  display: flex;
+  flex: 1 1 auto;
   min-height: 320px;
 }
 

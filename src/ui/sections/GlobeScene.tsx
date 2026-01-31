@@ -629,7 +629,7 @@ export default function GlobeScene() {
       const controls = new OrbitControls(camera, renderer.domElement);
       controls.enablePan = false;
       controls.enableDamping = true;
-      controls.minDistance = 2.6;
+      controls.minDistance = 2.2;
       controls.maxDistance = 5.2;
       controls.rotateSpeed = isTouchDevice ? 0.45 : 0.9;
       controls.autoRotate = false;
@@ -788,7 +788,7 @@ export default function GlobeScene() {
               targetQuaternionRef.current = null;
             }
           } else if (!pauseRotationRef.current) {
-            globeGroup.rotation.y += 0.0006;
+            globeGroup.rotation.y += 0.00035;
           }
           controlsRef.current?.update();
         }

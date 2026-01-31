@@ -1,8 +1,15 @@
 .wrapper {
-  height: 100%;
+  display: flex;
   min-height: 320px;
   position: relative;
   width: 100%;
+  flex: 1;
+}
+
+.wrapper :global(canvas) {
+  display: block;
+  height: 100% !important;
+  width: 100% !important;
 }
 
 .fallback {
