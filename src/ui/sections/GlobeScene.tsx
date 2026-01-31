@@ -51,6 +51,7 @@ const getQualitySettings = (width: number) => {
 
 type MarkerMesh = {
   mesh: THREE.Mesh;
+  hitMesh: THREE.Mesh;
   phase: number;
   caseFile: CaseFile;
 };
@@ -476,6 +477,17 @@ export default function GlobeScene() {
       quality.markerSegments,
       quality.markerSegments,
     );
+    const hitGeometry = new THREE.SphereGeometry(
+      0.05,
+      quality.markerSegments,
+      quality.markerSegments,
+    );
+    const hitMaterial = new THREE.MeshBasicMaterial({
+      color: new THREE.Color("#60e4ff"),
+      transparent: true,
+      opacity: 0,
+      depthWrite: false,
+    });
     cases.forEach((caseFile, index) => {
       const markerMaterial = new THREE.MeshStandardMaterial({
         color: new THREE.Color("#60e4ff"),
@@ -491,6 +503,7 @@ export default function GlobeScene() {
         markerMaterial.emissiveIntensity;
 
       const marker = new THREE.Mesh(markerGeometry, markerMaterial);
+      const hitMesh = new THREE.Mesh(hitGeometry, hitMaterial);
       const position = latLongToVector3(
         caseFile.coordinates[0],
         caseFile.coordinates[1],
@@ -498,10 +511,13 @@ export default function GlobeScene() {
       );
 
       marker.position.copy(position);
+      hitMesh.position.copy(position);
 
       marker.userData.caseFile = caseFile;
+      hitMesh.userData.caseFile = caseFile;
       markerGroup.add(marker);
-      markers.push({ mesh: marker, phase: index * 0.7, caseFile });
+      markerGroup.add(hitMesh);
+      markers.push({ mesh: marker, hitMesh, phase: index * 0.7, caseFile });
     });
 
     globeGroup.add(markerGroup);
@@ -686,7 +702,7 @@ export default function GlobeScene() {
 
         raycaster.setFromCamera(pointer, camera);
         const hits = raycaster.intersectObjects(
-          markers.map((marker) => marker.mesh),
+          markers.map((marker) => marker.hitMesh),
           false,
         );
 
@@ -694,9 +710,7 @@ export default function GlobeScene() {
           const hitMarker = hits[0].object as THREE.Mesh;
           const caseFile = hitMarker.userData.caseFile as CaseFile | undefined;
           if (caseFile) {
-            const found = markers.find(
-              (marker) => marker.caseFile.id === caseFile.id,
-            );
+            const found = markers.find((marker) => marker.hitMesh === hitMarker);
             activeMarkerRef.current = found ?? null;
             pauseRotationRef.current = true;
             controls.enableRotate = false;
@@ -738,13 +752,13 @@ export default function GlobeScene() {
 
         raycaster.setFromCamera(pointer, camera);
         const hits = raycaster.intersectObjects(
-          markers.map((marker) => marker.mesh),
+          markers.map((marker) => marker.hitMesh),
           false,
         );
 
         if (hits.length > 0) {
           const hitMarker = hits[0].object as THREE.Mesh;
-          const found = markers.find((marker) => marker.mesh === hitMarker);
+          const found = markers.find((marker) => marker.hitMesh === hitMarker);
           setHoverMarker(found ?? null);
         } else {
           setHoverMarker(null);
@@ -997,6 +1011,8 @@ export default function GlobeScene() {
       atmosphereGeometry.dispose();
       atmosphereMaterial.dispose();
       markerGeometry.dispose();
+      hitGeometry.dispose();
+      hitMaterial.dispose();
       starsGeometry.dispose();
       starsMaterial.dispose();
       markers.forEach((marker) => {
@@ -1083,7 +1099,14 @@ export default function GlobeScene() {
             initial={{ opacity: 0 }}
             animate={{ opacity: connectorOpacity }}
             transition={overlayTransition}
-          />
+          >
+            <motion.div
+              className={styles.connectorLine}
+              initial={{ scaleX: 0 }}
+              animate={{ scaleX: panelVisible ? 1 : 0 }}
+              transition={overlayTransition}
+            />
+          </motion.div>
           <div className={styles.cardAnchor}>
             <motion.div
               className={styles.card}
