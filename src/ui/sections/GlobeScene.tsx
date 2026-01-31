@@ -604,6 +604,8 @@ export default function GlobeScene() {
         return;
       }
 
+      const isTouchDevice = window.matchMedia("(pointer: coarse)").matches;
+
       try {
         await renderer.init();
       } catch (error) {
@@ -629,6 +631,7 @@ export default function GlobeScene() {
       controls.enableDamping = true;
       controls.minDistance = 2.6;
       controls.maxDistance = 5.2;
+      controls.rotateSpeed = isTouchDevice ? 0.45 : 0.9;
       controls.autoRotate = false;
       controls.enabled = false;
       controls.enableRotate = false;
