@@ -84,6 +84,9 @@ export default function GlobeScene() {
   const pauseRotationRef = useRef(false);
   const targetQuaternionRef = useRef<THREE.Quaternion | null>(null);
   const activeCaseRef = useRef<CaseFile | null>(null);
+  const hoverMarkerRef = useRef<MarkerMesh | null>(null);
+  const lastHoverMarkerRef = useRef<MarkerMesh | null>(null);
+  const hoverLerpRef = useRef(0);
   const [isSupported, setIsSupported] = useState(() => {
     if (typeof navigator === "undefined") {
       return false;
@@ -139,6 +142,9 @@ export default function GlobeScene() {
     let animationFrame = 0;
     let isDisposed = false;
     let handlePointerDown: ((event: PointerEvent) => void) | null = null;
+    let handlePointerMove: ((event: PointerEvent) => void) | null = null;
+    let handlePointerLeave: (() => void) | null = null;
+    let handlePointerUp: (() => void) | null = null;
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(
@@ -475,6 +481,10 @@ export default function GlobeScene() {
         opacity: 0,
         depthWrite: false,
       });
+      markerMaterial.userData.baseColor = markerMaterial.color.clone();
+      markerMaterial.userData.baseEmissive = markerMaterial.emissive.clone();
+      markerMaterial.userData.baseEmissiveIntensity =
+        markerMaterial.emissiveIntensity;
 
       const marker = new THREE.Mesh(markerGeometry, markerMaterial);
       const position = latLongToVector3(
@@ -639,6 +649,23 @@ export default function GlobeScene() {
 
       const raycaster = new THREE.Raycaster();
       const pointer = new THREE.Vector2();
+      const hoverColor = new THREE.Color("#d46a2f");
+      const hoverEmissive = new THREE.Color("#a94b1f");
+
+      const setHoverMarker = (marker: MarkerMesh | null) => {
+        if (hoverMarkerRef.current === marker) {
+          return;
+        }
+
+        if (hoverMarkerRef.current) {
+          lastHoverMarkerRef.current = hoverMarkerRef.current;
+        }
+        hoverMarkerRef.current = marker;
+
+        if (renderer) {
+          renderer.domElement.style.cursor = marker ? "pointer" : "grab";
+        }
+      };
 
       handlePointerDown = (event: PointerEvent) => {
         if (!renderer) {
@@ -647,6 +674,7 @@ export default function GlobeScene() {
         if (!introComplete) {
           return;
         }
+        renderer.domElement.style.cursor = "grabbing";
 
         const rect = renderer.domElement.getBoundingClientRect();
         pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
@@ -684,7 +712,55 @@ export default function GlobeScene() {
         }
       };
 
+      renderer.domElement.style.cursor = "grab";
       renderer.domElement.addEventListener("pointerdown", handlePointerDown);
+
+      handlePointerUp = () => {
+        if (!renderer) {
+          return;
+        }
+        renderer.domElement.style.cursor = hoverMarkerRef.current
+          ? "pointer"
+          : "grab";
+      };
+
+      handlePointerMove = (event: PointerEvent) => {
+        if (!renderer) {
+          return;
+        }
+        if (!introComplete) {
+          return;
+        }
+
+        const rect = renderer.domElement.getBoundingClientRect();
+        pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+        pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+        raycaster.setFromCamera(pointer, camera);
+        const hits = raycaster.intersectObjects(
+          markers.map((marker) => marker.mesh),
+          false,
+        );
+
+        if (hits.length > 0) {
+          const hitMarker = hits[0].object as THREE.Mesh;
+          const found = markers.find((marker) => marker.mesh === hitMarker);
+          setHoverMarker(found ?? null);
+        } else {
+          setHoverMarker(null);
+        }
+      };
+
+      handlePointerLeave = () => {
+        setHoverMarker(null);
+        if (renderer) {
+          renderer.domElement.style.cursor = "default";
+        }
+      };
+
+      renderer.domElement.addEventListener("pointermove", handlePointerMove);
+      renderer.domElement.addEventListener("pointerleave", handlePointerLeave);
+      renderer.domElement.addEventListener("pointerup", handlePointerUp);
 
       if (shouldSkipIntro) {
         completeIntro();
@@ -759,12 +835,58 @@ export default function GlobeScene() {
             countryGlowBaseOpacity * (introActive ? detailReveal : 1);
         }
 
+        const hoverTarget = hoverMarkerRef.current ? 1 : 0;
+        hoverLerpRef.current += (hoverTarget - hoverLerpRef.current) * 0.12;
+        if (!hoverMarkerRef.current && hoverLerpRef.current < 0.02) {
+          lastHoverMarkerRef.current = null;
+          hoverLerpRef.current = 0;
+        }
+
         markers.forEach((marker) => {
           const scale = 1 + 0.25 * Math.sin(time * 0.002 + marker.phase);
           marker.mesh.scale.setScalar(scale);
           const markerMaterial = marker.mesh
             .material as THREE.MeshStandardMaterial;
           markerMaterial.opacity = introActive ? detailReveal : 1;
+          const baseColor = markerMaterial.userData.baseColor as
+            | THREE.Color
+            | undefined;
+          const baseEmissive = markerMaterial.userData.baseEmissive as
+            | THREE.Color
+            | undefined;
+          const baseEmissiveIntensity = markerMaterial.userData
+            .baseEmissiveIntensity as number | undefined;
+          const isHoverTarget = marker === hoverMarkerRef.current;
+          const isFadeTarget =
+            marker === lastHoverMarkerRef.current && !hoverMarkerRef.current;
+          if (
+            (isHoverTarget || isFadeTarget) &&
+            baseColor &&
+            baseEmissive &&
+            typeof baseEmissiveIntensity === "number"
+          ) {
+            markerMaterial.color.lerpColors(
+              baseColor,
+              hoverColor,
+              hoverLerpRef.current,
+            );
+            markerMaterial.emissive.lerpColors(
+              baseEmissive,
+              hoverEmissive,
+              hoverLerpRef.current,
+            );
+            markerMaterial.emissiveIntensity =
+              baseEmissiveIntensity +
+              (1.6 - baseEmissiveIntensity) * hoverLerpRef.current;
+          } else if (
+            baseColor &&
+            baseEmissive &&
+            typeof baseEmissiveIntensity === "number"
+          ) {
+            markerMaterial.color.copy(baseColor);
+            markerMaterial.emissive.copy(baseEmissive);
+            markerMaterial.emissiveIntensity = baseEmissiveIntensity;
+          }
         });
 
         ambientLight.intensity = 0.25 + 0.35 * (introActive ? detailReveal : 1);
@@ -858,6 +980,15 @@ export default function GlobeScene() {
       controlsRef.current = null;
       if (renderer?.domElement && handlePointerDown) {
         renderer.domElement.removeEventListener("pointerdown", handlePointerDown);
+      }
+      if (renderer?.domElement && handlePointerMove) {
+        renderer.domElement.removeEventListener("pointermove", handlePointerMove);
+      }
+      if (renderer?.domElement && handlePointerLeave) {
+        renderer.domElement.removeEventListener("pointerleave", handlePointerLeave);
+      }
+      if (renderer?.domElement && handlePointerUp) {
+        renderer.domElement.removeEventListener("pointerup", handlePointerUp);
       }
 
       globeGeometry.dispose();
