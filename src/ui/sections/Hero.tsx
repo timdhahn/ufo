@@ -1,5 +1,4 @@
 import styles from "./Hero.module.scss";
-import { Button } from "../components/Button";
 import { GlassPanel } from "../components/GlassPanel";
 import { DataPill } from "../components/DataPill";
 import { GlobeClient } from "./GlobeClient";

@@ -28,31 +28,23 @@
   pointer-events: none;
   position: absolute;
   z-index: 3;
-  transition: opacity 240ms ease;
 }
 
-.overlayVisible {
-  opacity: 1;
-}
-
-.overlayHidden {
-  opacity: 0;
-  pointer-events: none;
+.cardAnchor {
+  position: absolute;
+  right: 6vw;
+  top: 14vh;
 }
 
 .card {
-  pointer-events: auto;
-  top: 14vh;
   max-width: 360px;
-  position: absolute;
-  right: 6vw;
-  transform: translateY(0) scale(1);
-  transition: transform 280ms ease, opacity 280ms ease;
+  pointer-events: auto;
+  position: relative;
 }
 
-.overlayHidden .card {
-  opacity: 0;
-  transform: translateY(24px) scale(0.98);
+.cardAnchor,
+.card {
+  pointer-events: auto;
 }
 
 .connector {
@@ -62,11 +54,6 @@
   pointer-events: none;
   position: absolute;
   transform-origin: 0 50%;
-  transition: opacity 240ms ease;
-}
-
-.overlayHidden .connector {
-  opacity: 0;
 }
 
 .closeButton {
@@ -88,12 +75,15 @@
 }
 
 @media (max-width: 900px) {
-  .card {
+  .cardAnchor {
     bottom: 1.5rem;
     left: 50%;
     right: auto;
     top: auto;
     transform: translate(-50%, 0);
+  }
+
+  .card {
     width: min(90vw, 360px);
   }
 }

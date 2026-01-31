@@ -11,6 +11,7 @@ import type { CaseFile } from "@/models/case";
 import { GlassPanel } from "../components/GlassPanel";
 import { CaseCard } from "../components/CaseCard";
 import { feature } from "topojson-client";
+import { motion, useReducedMotion } from "framer-motion";
 
 const CAMERA_DISTANCE = 3.6;
 const GLOBE_RADIUS = 1.55;
@@ -78,7 +79,6 @@ export default function GlobeScene() {
   const containerRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const lineRef = useRef<HTMLDivElement>(null);
-  const closeTimeoutRef = useRef<number | null>(null);
   const activeMarkerRef = useRef<MarkerMesh | null>(null);
   const controlsRef = useRef<OrbitControls | null>(null);
   const pauseRotationRef = useRef(false);
@@ -102,26 +102,30 @@ export default function GlobeScene() {
   });
   const [activeCase, setActiveCase] = useState<CaseFile | null>(null);
   const [panelVisible, setPanelVisible] = useState(false);
+  const shouldReduceMotion = useReducedMotion();
 
   const closeActiveCase = useCallback(() => {
-    if (closeTimeoutRef.current) {
-      window.clearTimeout(closeTimeoutRef.current);
-      closeTimeoutRef.current = null;
-    }
     setPanelVisible(false);
-    closeTimeoutRef.current = window.setTimeout(() => {
+  }, []);
+
+  useEffect(() => {
+    activeCaseRef.current = activeCase;
+  }, [activeCase]);
+
+  const handleOverlayAnimationComplete = useCallback(() => {
+    if (panelVisible) {
+      return;
+    }
+
+    if (activeCaseRef.current) {
       setActiveCase(null);
       activeMarkerRef.current = null;
       pauseRotationRef.current = false;
       if (controlsRef.current) {
         controlsRef.current.enableRotate = true;
       }
-    }, 260);
-  }, []);
-
-  useEffect(() => {
-    activeCaseRef.current = activeCase;
-  }, [activeCase]);
+    }
+  }, [panelVisible]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -599,7 +603,7 @@ export default function GlobeScene() {
         countryLines = new THREE.LineSegments(countryGeometry, countryMaterial);
         globeGroup.add(countryGlow);
         globeGroup.add(countryLines);
-      } catch (error) {
+      } catch {
         // ignore outline load failures
       }
     };
@@ -618,7 +622,7 @@ export default function GlobeScene() {
 
       try {
         await renderer.init();
-      } catch (error) {
+      } catch {
         if (!isDisposed) {
           setIsSupported(false);
         }
@@ -700,10 +704,6 @@ export default function GlobeScene() {
               (found?.mesh.position ?? hitMarker.position).clone().normalize(),
               new THREE.Vector3(0, 0, 1),
             );
-            if (closeTimeoutRef.current) {
-              window.clearTimeout(closeTimeoutRef.current);
-              closeTimeoutRef.current = null;
-            }
             setActiveCase(caseFile);
             setPanelVisible(true);
           }
@@ -1041,13 +1041,26 @@ export default function GlobeScene() {
     };
   }, [closeActiveCase, isSupported, shouldPlayIntro]);
 
-  useEffect(() => {
-    return () => {
-      if (closeTimeoutRef.current) {
-        window.clearTimeout(closeTimeoutRef.current);
-      }
-    };
-  }, []);
+  const overlayTransition = {
+    duration: shouldReduceMotion ? 0 : 0.24,
+    ease: [0.22, 1, 0.36, 1] as const,
+  };
+  const cardTransition = {
+    duration: shouldReduceMotion ? 0 : 0.28,
+    ease: [0.22, 1, 0.36, 1] as const,
+  };
+
+  const connectorOpacity = panelVisible ? 0.8 : 0;
+  const cardHidden = {
+    opacity: 0,
+    y: shouldReduceMotion ? 0 : 24,
+    scale: shouldReduceMotion ? 1 : 0.98,
+  };
+  const cardVisible = {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+  };
 
   return (
     <div className={styles.wrapper} ref={containerRef}>
@@ -1058,26 +1071,42 @@ export default function GlobeScene() {
         </div>
       )}
       {activeCase && (
-        <div
-          className={`${styles.overlay} ${
-            panelVisible ? styles.overlayVisible : styles.overlayHidden
-          }`}
+        <motion.div
+          className={styles.overlay}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: panelVisible ? 1 : 0 }}
+          transition={overlayTransition}
         >
-          <div className={styles.connector} ref={lineRef} />
-          <div className={styles.card} ref={cardRef}>
-            <button
-              className={styles.closeButton}
-              type="button"
-              onClick={closeActiveCase}
-              aria-label="Close case file"
+          <motion.div
+            className={styles.connector}
+            ref={lineRef}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: connectorOpacity }}
+            transition={overlayTransition}
+          />
+          <div className={styles.cardAnchor}>
+            <motion.div
+              className={styles.card}
+              ref={cardRef}
+              initial={cardHidden}
+              animate={panelVisible ? cardVisible : cardHidden}
+              transition={cardTransition}
+              onAnimationComplete={handleOverlayAnimationComplete}
             >
-              x
-            </button>
-            <GlassPanel>
-              <CaseCard caseFile={activeCase} />
-            </GlassPanel>
+              <button
+                className={styles.closeButton}
+                type="button"
+                onClick={closeActiveCase}
+                aria-label="Close case file"
+              >
+                x
+              </button>
+              <GlassPanel>
+                <CaseCard caseFile={activeCase} />
+              </GlassPanel>
+            </motion.div>
           </div>
-        </div>
+        </motion.div>
       )}
     </div>
   );
